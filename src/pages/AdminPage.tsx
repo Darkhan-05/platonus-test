@@ -3,7 +3,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { useQuiz } from "@/context/QuizContext";
 
 export default function AdminPage() {
-  const { quizzes, deleteQuiz, attempts } = useQuiz();
+  const { quizzes, attempts } = useQuiz();
 
   const getBestScore = (quizId: string) => {
     const quizAttempts = attempts.filter(a => a.quizId === quizId);

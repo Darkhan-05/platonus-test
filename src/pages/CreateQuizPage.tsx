@@ -9,7 +9,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useQuiz } from "@/context/QuizContext";
 import { type Question, type Quiz } from "@/types";
 import { Trash2 } from "lucide-react";
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 export default function CreateQuizPage() {
