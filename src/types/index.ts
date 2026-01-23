@@ -2,8 +2,8 @@ export type Role = 'admin' | 'user';
 
 export type User = {
   id: string;
-  name: string;
-  email: string;
+  username: string; // Unique Login ID (e.g. User#1234)
+  name: string; // Display Name
   role: Role;
   favorites: string[];
 };
@@ -18,6 +18,7 @@ export type Question = {
 export type Quiz = {
   id: string;
   title: string;
+  description: string;
   questions: Question[];
   createdBy: string;
   createdAt: string;

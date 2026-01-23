@@ -24,6 +24,9 @@ export default function HomePage() {
             <Link to="/register">
               <Button size="lg">Get Started</Button>
             </Link>
+            <Link to="/login">
+              <Button variant="outline" size="lg">Login</Button>
+            </Link>
           </>
         )}
       </div>
