@@ -1,6 +1,5 @@
-import { Link, useNavigate } from "react-router-dom"
-import { useAuth } from "@/context/AuthContext"
 import { useTheme } from "@/components/theme-provider"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -10,17 +9,16 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { Moon, Sun, User as UserIcon, LogOut } from "lucide-react"
+import { useAuth } from "@/context/AuthContext"
+import { LogOut, Moon, Sun, User as UserIcon } from "lucide-react"
+import { Link } from "react-router-dom"
 
 export function Navbar() {
   const { user, logout } = useAuth()
   const { setTheme } = useTheme()
-  const navigate = useNavigate()
 
   const handleLogout = () => {
     logout()
-    navigate("/login")
   }
 
   return (
@@ -33,18 +31,12 @@ export function Navbar() {
           {user && (
             <div className="hidden md:flex items-center gap-4 text-sm font-medium">
               <Link to="/dashboard" className="transition-colors hover:text-foreground/80 text-foreground/60">Dashboard</Link>
-              {user.role === 'admin' && (
-                  <>
-                    <Link to="/create-quiz" className="transition-colors hover:text-foreground/80 text-foreground/60">Create Quiz</Link>
-                    <Link to="/admin" className="transition-colors hover:text-foreground/80 text-foreground/60">Admin</Link>
-                  </>
-              )}
             </div>
           )}
         </div>
 
         <div className="flex items-center gap-2">
-           <DropdownMenu>
+          <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon">
                 <Sun className="h-[1.2rem] w-[1.2rem] rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
@@ -78,20 +70,19 @@ export function Navbar() {
                 <DropdownMenuLabel>My Account</DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem disabled>
-                    <UserIcon className="mr-2 h-4 w-4" />
-                    {user.name} ({user.role})
+                  <UserIcon className="mr-2 h-4 w-4" />
+                  {user.name}
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleLogout}>
-                    <LogOut className="mr-2 h-4 w-4" />
-                    Log out
+                  <LogOut className="mr-2 h-4 w-4" />
+                  Log out
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           ) : (
             <div className="flex items-center gap-2">
-                <Link to="/login"><Button variant="ghost">Login</Button></Link>
-                <Link to="/register"><Button>Sign Up</Button></Link>
+              <Link to="/register"><Button>Sign Up</Button></Link>
             </div>
           )}
         </div>
