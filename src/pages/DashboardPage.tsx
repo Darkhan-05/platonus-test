@@ -1,10 +1,11 @@
-import { useQuiz } from "@/context/QuizContext";
-import { Link } from "react-router-dom";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { useQuiz } from "@/context/QuizContext";
+import { Trash2 } from "lucide-react";
+import { Link } from "react-router-dom";
 
 export default function DashboardPage() {
-  const { quizzes } = useQuiz();
+  const { quizzes, deleteQuiz } = useQuiz();
 
   return (
     <div className="space-y-6">
@@ -18,13 +19,17 @@ export default function DashboardPage() {
           {quizzes.map((quiz) => (
             <Card key={quiz.id}>
               <CardHeader>
-                <CardTitle>{quiz.title}</CardTitle>
+                <div className="flex justify-between items-center">
+                  <CardTitle>{quiz.title}</CardTitle>
+                  <Button variant="ghost" size="sm" onClick={() => deleteQuiz(quiz.id)}>
+                    <Trash2 className="h-4 w-4 text-destructive" />
+                  </Button>
+                </div>
                 <CardDescription>{quiz.questions.length} Questions</CardDescription>
               </CardHeader>
               <CardContent>
-                <p className="text-sm text-muted-foreground mb-4 line-clamp-2">{quiz.description}</p>
                 <div className="flex justify-between items-center text-xs text-muted-foreground mb-4">
-                    <span>Solved: {quiz.timesSolved} times</span>
+                  <span>Solved: {quiz.timesSolved} times</span>
                 </div>
                 <Link to={`/quiz/${quiz.id}/setup`}>
                   <Button className="w-full">Start Quiz</Button>

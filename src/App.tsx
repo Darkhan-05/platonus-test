@@ -43,7 +43,7 @@ function App() {
                 } />
 
                 <Route path="/create-quiz" element={
-                  <ProtectedRoute requireAdmin>
+                  <ProtectedRoute>
                     <CreateQuizPage />
                   </ProtectedRoute>
                 } />
@@ -67,7 +67,7 @@ function App() {
                 } />
 
                 <Route path="/admin" element={
-                  <ProtectedRoute requireAdmin>
+                  <ProtectedRoute>
                     <AdminPage />
                   </ProtectedRoute>
                 } />

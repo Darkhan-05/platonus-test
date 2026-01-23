@@ -28,11 +28,12 @@ export function Navbar() {
           <Link to="/" className="mr-6 flex items-center space-x-2">
             <span className="font-bold sm:inline-block">QuizApp</span>
           </Link>
-          {user && (
-            <div className="hidden md:flex items-center gap-4 text-sm font-medium">
-              <Link to="/dashboard" className="transition-colors hover:text-foreground/80 text-foreground/60">Dashboard</Link>
-            </div>
-          )}
+
+          <div className="hidden md:flex items-center gap-4 text-sm font-medium">
+            <Link to="/dashboard" className="transition-colors hover:text-foreground/80 text-foreground/60">Dashboard</Link>
+          </div>
+          <Link to="/create-quiz" className="transition-colors hover:text-foreground/80 text-foreground/60">Create Quiz</Link>
+          <Link to="/admin" className="transition-colors hover:text-foreground/80 text-foreground/60">Admin</Link>
         </div>
 
         <div className="flex items-center gap-2">

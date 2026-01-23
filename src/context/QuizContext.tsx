@@ -36,10 +36,13 @@ export const QuizProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   const deleteQuiz = (id: string) => {
-    const updatedQuizzes = quizzes.filter(q => q.id !== id);
-    setQuizzes(updatedQuizzes);
-    localStorage.setItem('platonus_quizzes', JSON.stringify(updatedQuizzes));
-  };
+    const isConfirmed = window.confirm("Вы уверены, что хотите удалить этот вопрос?");
+    if (isConfirmed) {
+      const updatedQuizzes = quizzes.filter(q => q.id !== id);
+      setQuizzes(updatedQuizzes);
+      localStorage.setItem('platonus_quizzes', JSON.stringify(updatedQuizzes));
+    }
+  };  
 
   const addAttempt = (attempt: Attempt) => {
     const updatedAttempts = [...attempts, attempt];

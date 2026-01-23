@@ -18,7 +18,6 @@ export type Question = {
 export type Quiz = {
   id: string;
   title: string;
-  description: string;
   questions: Question[];
   createdBy: string;
   createdAt: string;

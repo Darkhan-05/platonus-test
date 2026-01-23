@@ -9,7 +9,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useQuiz } from "@/context/QuizContext";
 import { type Question, type Quiz } from "@/types";
 import { Trash2 } from "lucide-react";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 export default function CreateQuizPage() {
@@ -18,7 +18,6 @@ export default function CreateQuizPage() {
     const navigate = useNavigate();
 
     const [title, setTitle] = useState("");
-    const [description, setDescription] = useState("");
     const [rawText, setRawText] = useState("");
     const [parsedQuestions, setParsedQuestions] = useState<Question[]>([]);
 
@@ -95,15 +94,14 @@ export default function CreateQuizPage() {
     };
 
     const handleSave = () => {
-        if (!title || parsedQuestions.length === 0) {
-            alert("Please provide a title and at least one question.");
+        if (parsedQuestions.length === 0) {
+            alert("Please provide at least one question.");
             return;
         }
 
         const newQuiz: Quiz = {
             id: crypto.randomUUID(),
-            title,
-            description,
+            title: title || parsedQuestions[0].text,
             questions: parsedQuestions,
             createdBy: user?.id || "unknown",
             createdAt: new Date().toISOString(),
@@ -133,10 +131,6 @@ export default function CreateQuizPage() {
                     <div className="space-y-2">
                         <Label>Title</Label>
                         <Input value={title} onChange={e => setTitle(e.target.value)} placeholder="e.g. Mathematics 101" />
-                    </div>
-                    <div className="space-y-2">
-                        <Label>Description</Label>
-                        <Textarea value={description} onChange={e => setDescription(e.target.value)} placeholder="Short description..." />
                     </div>
                 </CardContent>
             </Card>
