@@ -50,7 +50,7 @@ export default function DashboardPage() {
       </div>
 
       {displayQuizzes.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-16 text-center border-2 border-dashed rounded-lg bg-muted/20">
+        <div className="flex flex-col items-center justify-center py-16 text-center">
           <div className="text-lg font-medium mb-2">Нет доступных тестов</div>
           <p className="text-muted-foreground mb-6 max-w-sm">
             Вы пока не создали ни одного теста.
