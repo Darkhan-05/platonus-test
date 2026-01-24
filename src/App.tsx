@@ -16,7 +16,7 @@ import ResultsPage from "@/pages/ResultsPage";
 import AdminPage from "@/pages/AdminPage";
 
 // Protected Route Component
-const ProtectedRoute = ({ children, requireAdmin = false }: { childre: React.ReactNode, requireAdmin?: boolean }) => {
+const ProtectedRoute = ({ children, requireAdmin = false }: { children: React.ReactNode, requireAdmin?: boolean }) => {
   const { user } = useAuth();
 
   if (!user) {
