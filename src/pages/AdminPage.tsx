@@ -1,9 +1,11 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useQuiz } from "@/context/QuizContext";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
+import { Trash2 } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default function AdminPage() {
-  const { quizzes, attempts } = useQuiz();
+  const { quizzes, deleteQuiz, attempts } = useQuiz();
 
   const getBestScore = (quizId: string) => {
     const quizAttempts = attempts.filter(a => a.quizId === quizId);
@@ -19,33 +21,39 @@ export default function AdminPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Quiz Management</CardTitle>
+            <CardTitle>Quiz Management</CardTitle>
         </CardHeader>
         <CardContent>
-          {quizzes.length === 0 ? (
-            <p className="text-muted-foreground">No quizzes found.</p>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Title</TableHead>
-                  <TableHead>Questions</TableHead>
-                  <TableHead>Times Solved</TableHead>
-                  <TableHead>Best Result</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {quizzes.map((quiz) => (
-                  <TableRow key={quiz.id}>
-                    <TableCell className="font-medium">{quiz.title}</TableCell>
-                    <TableCell>{quiz.questions.length}</TableCell>
-                    <TableCell>{quiz.timesSolved}</TableCell>
-                    <TableCell>{getBestScore(quiz.id)}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
+            {quizzes.length === 0 ? (
+                <p className="text-muted-foreground">No quizzes found.</p>
+            ) : (
+                <Table>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHead>Title</TableHead>
+                            <TableHead>Questions</TableHead>
+                            <TableHead>Times Solved</TableHead>
+                            <TableHead>Best Result</TableHead>
+                            <TableHead className="text-right">Actions</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {quizzes.map((quiz) => (
+                            <TableRow key={quiz.id}>
+                                <TableCell className="font-medium">{quiz.title}</TableCell>
+                                <TableCell>{quiz.questions.length}</TableCell>
+                                <TableCell>{quiz.timesSolved}</TableCell>
+                                <TableCell>{getBestScore(quiz.id)}</TableCell>
+                                <TableCell className="text-right">
+                                    <Button variant="ghost" size="sm" onClick={() => deleteQuiz(quiz.id)}>
+                                        <Trash2 className="h-4 w-4 text-destructive" />
+                                    </Button>
+                                </TableCell>
+                            </TableRow>
+                        ))}
+                    </TableBody>
+                </Table>
+            )}
         </CardContent>
       </Card>
     </div>

@@ -3,8 +3,8 @@ import { type User, type Role } from '@/types';
 
 interface AuthContextType {
   user: User | null;
-  login: (email: string) => boolean; // returns success
-  register: (name: string, email: string, role?: Role) => boolean; // returns success
+  login: (username: string) => boolean; // returns success
+  register: (name: string, role?: Role) => string | null; // returns generated username or null on failure
   logout: () => void;
   toggleFavorite: (questionId: string) => void;
 }
@@ -21,11 +21,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   }, []);
 
-  const login = (email: string) => {
+  const login = (username: string) => {
     const usersStr = localStorage.getItem('platonus_users');
     let users: User[] = usersStr ? JSON.parse(usersStr) : [];
 
-    let foundUser = users.find(u => u.email === email);
+    let foundUser = users.find(u => u.username === username);
 
     if (!foundUser) {
        return false;
@@ -36,18 +36,25 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     return true;
   };
 
-  const register = (name: string, email: string, role: Role = 'user') => {
+  const register = (name: string, role: Role = 'user') => {
     const usersStr = localStorage.getItem('platonus_users');
     let users: User[] = usersStr ? JSON.parse(usersStr) : [];
 
-    if (users.find(u => u.email === email)) {
-        return false;
+    // Generate unique username
+    let username = "";
+    let isUnique = false;
+    while (!isUnique) {
+        const randomNum = Math.floor(1000 + Math.random() * 9000); // 1000-9999
+        username = `${name.replace(/\s+/g, '')}#${randomNum}`;
+        if (!users.find(u => u.username === username)) {
+            isUnique = true;
+        }
     }
 
     const newUser: User = {
         id: crypto.randomUUID(),
         name,
-        email,
+        username,
         role,
         favorites: []
     };
@@ -55,10 +62,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     users.push(newUser);
     localStorage.setItem('platonus_users', JSON.stringify(users));
 
-    // Auto login
-    setUser(newUser);
-    localStorage.setItem('platonus_current_user', JSON.stringify(newUser));
-    return true;
+    // Do NOT auto login, return username so user sees it
+    return username;
   };
 
   const logout = () => {

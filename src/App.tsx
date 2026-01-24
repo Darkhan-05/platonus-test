@@ -1,24 +1,26 @@
-import { Layout } from "@/components/Layout";
-import { ThemeProvider } from "@/components/theme-provider";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/context/AuthContext";
+import { ThemeProvider } from "@/components/theme-provider";
+import { Layout } from "@/components/Layout";
 import { QuizProvider } from "@/context/QuizContext";
-import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 
 // Pages
-import AdminPage from "@/pages/AdminPage";
-import CreateQuizPage from "@/pages/CreateQuizPage";
-import DashboardPage from "@/pages/DashboardPage";
-import QuizSessionPage from "@/pages/QuizSessionPage";
-import QuizSetupPage from "@/pages/QuizSetupPage";
+import HomePage from "@/pages/HomePage";
+import LoginPage from "@/pages/LoginPage";
 import RegisterPage from "@/pages/RegisterPage";
+import DashboardPage from "@/pages/DashboardPage";
+import CreateQuizPage from "@/pages/CreateQuizPage";
+import QuizSetupPage from "@/pages/QuizSetupPage";
+import QuizSessionPage from "@/pages/QuizSessionPage";
 import ResultsPage from "@/pages/ResultsPage";
+import AdminPage from "@/pages/AdminPage";
 
 // Protected Route Component
-const ProtectedRoute = ({ children, requireAdmin = false }: { children: React.ReactNode, requireAdmin?: boolean }) => {
+const ProtectedRoute = ({ children, requireAdmin = false }: { children: JSX.Element, requireAdmin?: boolean }) => {
   const { user } = useAuth();
 
   if (!user) {
-    return <Navigate to="/register" replace />;
+    return <Navigate to="/login" replace />;
   }
 
   if (requireAdmin && user.role !== 'admin') {
@@ -36,6 +38,10 @@ function App() {
           <BrowserRouter>
             <Routes>
               <Route element={<Layout />}>
+                <Route path="/" element={<HomePage />} />
+                <Route path="/login" element={<LoginPage />} />
+                <Route path="/register" element={<RegisterPage />} />
+
                 <Route path="/dashboard" element={
                   <ProtectedRoute>
                     <DashboardPage />
@@ -43,35 +49,34 @@ function App() {
                 } />
 
                 <Route path="/create-quiz" element={
-                  <ProtectedRoute>
+                  <ProtectedRoute requireAdmin>
                     <CreateQuizPage />
                   </ProtectedRoute>
                 } />
 
                 <Route path="/quiz/:quizId/setup" element={
-                  <ProtectedRoute>
-                    <QuizSetupPage />
-                  </ProtectedRoute>
+                    <ProtectedRoute>
+                        <QuizSetupPage />
+                    </ProtectedRoute>
                 } />
 
                 <Route path="/quiz/:quizId/play" element={
-                  <ProtectedRoute>
-                    <QuizSessionPage />
-                  </ProtectedRoute>
+                    <ProtectedRoute>
+                        <QuizSessionPage />
+                    </ProtectedRoute>
                 } />
 
                 <Route path="/quiz/:quizId/results/:attemptId" element={
-                  <ProtectedRoute>
-                    <ResultsPage />
-                  </ProtectedRoute>
+                    <ProtectedRoute>
+                        <ResultsPage />
+                    </ProtectedRoute>
                 } />
 
-                <Route path="/admin" element={
-                  <ProtectedRoute>
+                 <Route path="/admin" element={
+                  <ProtectedRoute requireAdmin>
                     <AdminPage />
                   </ProtectedRoute>
                 } />
-                <Route path="/*" element={<RegisterPage />} />
               </Route>
             </Routes>
           </BrowserRouter>
