@@ -24,7 +24,6 @@ export default function CreateQuizPage() {
   const [rawText, setRawText] = useState("");
   const [parsedQuestions, setParsedQuestions] = useState<Question[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [apiKey, setApiKey] = useState("");
 
   const parseTextContent = async (text: string) => {
     // Format: <question>Question Text <variant>Option 1 <variant>Option 2
