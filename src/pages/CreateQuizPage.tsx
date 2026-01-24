@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { type Question, type Quiz } from "@/types";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Trash2, Loader2 } from "lucide-react";
+import { Trash2, Loader2, FileText, Keyboard } from "lucide-react";
 import mammoth from "mammoth";
 import { generateQuestionVariants } from "@/lib/gemini";
 
@@ -20,7 +20,6 @@ export default function CreateQuizPage() {
   const navigate = useNavigate();
 
   const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
   const [rawText, setRawText] = useState("");
   const [parsedQuestions, setParsedQuestions] = useState<Question[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -38,21 +37,14 @@ export default function CreateQuizPage() {
       let variants = variantParts.slice(1).map(v => v.trim()).filter(v => v);
 
       if (questionText) {
-          // GEMINI INTEGRATION LOGIC
           if (variants.length === 0) {
-              // No variants found, call Gemini
-              // We need to set the API Key globally or pass it.
-              // For simulation, we assume user might have entered it or it's in env.
-              // Here we rely on the lib function which checks env or mocks.
-
-              // If user provided key in UI (for testing), we should ideally use it.
-              // But for now let's stick to the lib function logic.
+              // Gemini logic
               try {
                   const generatedVariants = await generateQuestionVariants(questionText);
                   variants = generatedVariants;
               } catch (e) {
                   console.error("Gemini failed for", questionText);
-                  variants = ["Error generating variants"];
+                  variants = ["Ошибка генерации вариантов"];
               }
           }
 
@@ -93,7 +85,7 @@ export default function CreateQuizPage() {
         } else if (uploadedFile.name.endsWith(".txt")) {
             text = await uploadedFile.text();
         } else {
-            alert("Unsupported format. Please use .docx, .doc, or .txt");
+            alert("Неподдерживаемый формат. Пожалуйста, используйте .docx, .doc или .txt");
             setIsProcessing(false);
             return;
         }
@@ -103,22 +95,16 @@ export default function CreateQuizPage() {
 
     } catch (err) {
         console.error(err);
-        alert("Error parsing file.");
+        alert("Ошибка при чтении файла.");
     }
 
     setIsProcessing(false);
   };
 
   const handleSave = () => {
-    if (!title || parsedQuestions.length === 0) {
-        alert("Please provide a title and at least one question.");
-        return;
-    }
-
     const newQuiz: Quiz = {
         id: crypto.randomUUID(),
-        title,
-        description,
+        title: title || parsedQuestions[0].text,
         questions: parsedQuestions,
         createdBy: user?.id || "unknown",
         createdAt: new Date().toISOString(),
@@ -134,64 +120,79 @@ export default function CreateQuizPage() {
   };
 
   return (
-    <div className="container mx-auto max-w-4xl space-y-8">
+    <div className="container mx-auto max-w-4xl space-y-8 py-8">
         <div>
-            <h1 className="text-3xl font-bold">Create New Quiz</h1>
-            <p className="text-muted-foreground">Add questions manually or upload a file (.docx, .doc, .txt).</p>
+            <h1 className="text-3xl font-bold">Создание нового теста</h1>
+            <p className="text-muted-foreground mt-2">
+                Добавляйте вопросы вручную или загрузите файл с готовым списком (.docx, .txt).
+            </p>
         </div>
 
         <Card>
             <CardHeader>
-                <CardTitle>Quiz Details</CardTitle>
+                <CardTitle>Название теста</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
                 <div className="space-y-2">
-                    <Label>Title</Label>
-                    <Input value={title} onChange={e => setTitle(e.target.value)} placeholder="e.g. Mathematics 101" />
-                </div>
-                <div className="space-y-2">
-                    <Label>Description</Label>
-                    <Textarea value={description} onChange={e => setDescription(e.target.value)} placeholder="Short description..." />
+                    <Input 
+                        value={title} 
+                        onChange={e => setTitle(e.target.value)} 
+                        placeholder="Например: Основы высшей математики" 
+                    />
                 </div>
             </CardContent>
         </Card>
 
         <Card>
             <CardHeader>
-                <CardTitle>Add Questions</CardTitle>
-                <CardDescription>
-                    Format: &lt;question&gt;Text &lt;variant&gt;Correct...
+                <CardTitle>Добавление вопросов</CardTitle>
+                <CardDescription className="leading-relaxed">
+                    Используйте формат: <br/><code>&lt;question&gt;Текст вопроса <br/>&lt;variant&gt;Правильный ответ<br/>&lt;variant&gt;Неправильный ответ</code>
                     <br/>
-                    <b>Gemini AI:</b> If you provide only &lt;question&gt; tags without variants, AI will generate them.
+                    <span className="inline-block mt-2 p-2 bg-blue-50 text-blue-800 rounded text-xs font-medium dark:bg-blue-900/30 dark:text-blue-200">
+                        ✨ <b>Gemini AI:</b> Если вы укажете только тег <code>&lt;question&gt;</code> без вариантов, 
+                        искусственный интеллект сгенерирует ответы автоматически.
+                    </span>
                 </CardDescription>
             </CardHeader>
             <CardContent>
                 <Tabs defaultValue="manual">
                     <TabsList className="grid w-full grid-cols-2">
-                        <TabsTrigger value="manual">Manual Input</TabsTrigger>
-                        <TabsTrigger value="upload">File Upload</TabsTrigger>
+                        <TabsTrigger value="manual" className="flex items-center gap-2">
+                            <Keyboard className="h-4 w-4"/> Ручной ввод
+                        </TabsTrigger>
+                        <TabsTrigger value="upload" className="flex items-center gap-2">
+                            <FileText className="h-4 w-4"/> Загрузка файла
+                        </TabsTrigger>
                     </TabsList>
+                    
                     <TabsContent value="manual" className="space-y-4 pt-4">
                         <div className="space-y-2">
-                            <Label>Question Text</Label>
+                            <Label>Текст с вопросами</Label>
                             <Textarea
-                                className="min-h-[150px] font-mono text-sm"
-                                placeholder="<question>What is 2+2? <variant>4 <variant>3"
+                                className="min-h-[150px] font-mono text-sm leading-relaxed"
+                                placeholder={"<question>Сколько будет 2+2? \n<variant>4 \n<variant>3\n<question>Столица Франции?"}
                                 value={rawText}
                                 onChange={e => setRawText(e.target.value)}
                             />
                         </div>
                         <Button onClick={handleTextParse} disabled={isProcessing}>
                             {isProcessing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                            Process Questions
+                            {isProcessing ? "Обработка..." : "Распознать вопросы"}
                         </Button>
                     </TabsContent>
+                    
                     <TabsContent value="upload" className="space-y-4 pt-4">
                         <div className="space-y-2">
-                            <Label>Upload File (.docx, .doc, .txt)</Label>
+                            <Label>Выберите файл (.docx, .doc, .txt)</Label>
                             <Input type="file" accept=".docx,.doc,.txt" onChange={handleFileUpload} disabled={isProcessing} />
                         </div>
-                        {isProcessing && <p className="text-sm text-muted-foreground animate-pulse">Processing file and generating AI answers...</p>}
+                        {isProcessing && (
+                            <div className="flex items-center gap-2 text-sm text-muted-foreground animate-pulse">
+                                <Loader2 className="h-4 w-4 animate-spin"/>
+                                Анализируем файл и генерируем ответы с помощью AI...
+                            </div>
+                        )}
                     </TabsContent>
                 </Tabs>
             </CardContent>
@@ -200,21 +201,32 @@ export default function CreateQuizPage() {
         {parsedQuestions.length > 0 && (
             <Card>
                 <CardHeader>
-                    <CardTitle>Preview ({parsedQuestions.length} Questions)</CardTitle>
+                    <CardTitle>Предпросмотр ({parsedQuestions.length} вопросов)</CardTitle>
+                    <CardDescription>Проверьте корректность распознавания перед сохранением.</CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <ScrollArea className="h-[400px] rounded-md border p-4">
-                        <div className="space-y-4">
+                    <ScrollArea className="h-[400px] rounded-md border p-4 bg-muted/10">
+                        <div className="space-y-6">
                             {parsedQuestions.map((q, i) => (
-                                <div key={q.id} className="border-b pb-4 last:border-0">
-                                    <div className="flex justify-between items-start">
-                                        <div className="font-semibold">Q{i+1}: {q.text}</div>
-                                        <Button variant="ghost" size="sm" onClick={() => removeQuestion(q.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                                <div key={q.id} className="border-b pb-4 last:border-0 last:pb-0">
+                                    <div className="flex justify-between items-start gap-4">
+                                        <div className="font-semibold text-sm">
+                                            <span className="text-muted-foreground mr-2">#{i+1}</span>
+                                            {q.text}
+                                        </div>
+                                        <Button 
+                                            variant="ghost" 
+                                            size="icon" 
+                                            className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                                            onClick={() => removeQuestion(q.id)}
+                                        >
+                                            <Trash2 className="h-4 w-4" />
+                                        </Button>
                                     </div>
-                                    <ul className="mt-2 list-disc list-inside text-sm text-muted-foreground">
+                                    <ul className="mt-3 space-y-1">
                                         {q.variants.map((v, idx) => (
-                                            <li key={idx} className={idx === 0 ? "text-green-600 font-medium" : ""}>
-                                                {v} {idx === 0 && "(Correct)"}
+                                            <li key={idx} className={`text-sm px-2 py-1 rounded ${idx === 0 ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 w-fit" : "text-muted-foreground"}`}>
+                                                {v} {idx === 0 && "✓ (Верный)"}
                                             </li>
                                         ))}
                                     </ul>
@@ -226,9 +238,13 @@ export default function CreateQuizPage() {
             </Card>
         )}
 
-        <div className="flex justify-end gap-4">
-            <Button variant="outline" onClick={() => navigate("/dashboard")}>Cancel</Button>
-            <Button size="lg" onClick={handleSave} disabled={parsedQuestions.length === 0}>Save Quiz</Button>
+        <div className="flex justify-end gap-4 pb-10">
+            <Button variant="outline" onClick={() => navigate("/dashboard")}>
+                Отмена
+            </Button>
+            <Button size="lg" onClick={handleSave} disabled={parsedQuestions.length === 0}>
+                Сохранить тест
+            </Button>
         </div>
     </div>
   );

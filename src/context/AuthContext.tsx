@@ -1,10 +1,10 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { type User, type Role } from '@/types';
+import { type User } from '@/types';
 
 interface AuthContextType {
   user: User | null;
   login: (username: string) => boolean; // returns success
-  register: (name: string, role?: Role) => string | null; // returns generated username or null on failure
+  register: (name: string) => void; // returns generated username or null on failure
   logout: () => void;
   toggleFavorite: (questionId: string) => void;
 }
@@ -28,7 +28,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     let foundUser = users.find(u => u.username === username);
 
     if (!foundUser) {
-       return false;
+      return false;
     }
 
     setUser(foundUser);
@@ -36,7 +36,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     return true;
   };
 
-  const register = (name: string, role: Role = 'user') => {
+  const register = (name: string) => {
     const usersStr = localStorage.getItem('platonus_users');
     let users: User[] = usersStr ? JSON.parse(usersStr) : [];
 
@@ -44,26 +44,24 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     let username = "";
     let isUnique = false;
     while (!isUnique) {
-        const randomNum = Math.floor(1000 + Math.random() * 9000); // 1000-9999
-        username = `${name.replace(/\s+/g, '')}#${randomNum}`;
-        if (!users.find(u => u.username === username)) {
-            isUnique = true;
-        }
+      const randomNum = Math.floor(1000 + Math.random() * 9000); // 1000-9999
+      username = `${name.replace(/\s+/g, '')}#${randomNum}`;
+      if (!users.find(u => u.username === username)) {
+        isUnique = true;
+      }
     }
 
     const newUser: User = {
-        id: crypto.randomUUID(),
-        name,
-        username,
-        role,
-        favorites: []
+      id: crypto.randomUUID(),
+      name,
+      username,
+      favorites: []
     };
 
     users.push(newUser);
     localStorage.setItem('platonus_users', JSON.stringify(users));
 
-    // Do NOT auto login, return username so user sees it
-    return username;
+    setUser(newUser);
   };
 
   const logout = () => {
@@ -72,23 +70,23 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   const toggleFavorite = (questionId: string) => {
-      if (!user) return;
+    if (!user) return;
 
-      const updatedFavorites = user.favorites.includes(questionId)
-        ? user.favorites.filter(id => id !== questionId)
-        : [...user.favorites, questionId];
+    const updatedFavorites = user.favorites.includes(questionId)
+      ? user.favorites.filter(id => id !== questionId)
+      : [...user.favorites, questionId];
 
-      const updatedUser = { ...user, favorites: updatedFavorites };
-      setUser(updatedUser);
-      localStorage.setItem('platonus_current_user', JSON.stringify(updatedUser));
+    const updatedUser = { ...user, favorites: updatedFavorites };
+    setUser(updatedUser);
+    localStorage.setItem('platonus_current_user', JSON.stringify(updatedUser));
 
-      // Update in "DB" too
-      const usersStr = localStorage.getItem('platonus_users');
-      if (usersStr) {
-          let users: User[] = JSON.parse(usersStr);
-          users = users.map(u => u.id === user.id ? updatedUser : u);
-          localStorage.setItem('platonus_users', JSON.stringify(users));
-      }
+    // Update in "DB" too
+    const usersStr = localStorage.getItem('platonus_users');
+    if (usersStr) {
+      let users: User[] = JSON.parse(usersStr);
+      users = users.map(u => u.id === user.id ? updatedUser : u);
+      localStorage.setItem('platonus_users', JSON.stringify(users));
+    }
   };
 
   return (

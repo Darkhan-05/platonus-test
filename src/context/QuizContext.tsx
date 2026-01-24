@@ -95,7 +95,6 @@ export const QuizProvider = ({ children }: { children: React.ReactNode }) => {
       const favQuiz: Quiz = {
           id: "favorites-quiz",
           title: "My Favorites",
-          description: "A collection of your favorite questions.",
           questions: favoriteQuestions,
           createdBy: "system",
           createdAt: new Date().toISOString(),

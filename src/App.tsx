@@ -1,32 +1,37 @@
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { AuthProvider, useAuth } from "@/context/AuthContext";
-import { ThemeProvider } from "@/components/theme-provider";
 import { Layout } from "@/components/Layout";
+import { ThemeProvider } from "@/components/theme-provider";
+import { AuthProvider, useAuth } from "@/context/AuthContext";
 import { QuizProvider } from "@/context/QuizContext";
+import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 
-// Pages
-import HomePage from "@/pages/HomePage";
-import LoginPage from "@/pages/LoginPage";
-import RegisterPage from "@/pages/RegisterPage";
-import DashboardPage from "@/pages/DashboardPage";
 import CreateQuizPage from "@/pages/CreateQuizPage";
-import QuizSetupPage from "@/pages/QuizSetupPage";
+import DashboardPage from "@/pages/DashboardPage";
 import QuizSessionPage from "@/pages/QuizSessionPage";
+import QuizSetupPage from "@/pages/QuizSetupPage";
+import RegisterPage from "@/pages/RegisterPage";
 import ResultsPage from "@/pages/ResultsPage";
-import AdminPage from "@/pages/AdminPage";
+import FavoritesPage from "./pages/FavoritesPage";
 
-// Protected Route Component
 const ProtectedRoute = ({ children, requireAdmin = false }: { children: React.ReactNode, requireAdmin?: boolean }) => {
   const { user } = useAuth();
 
   if (!user) {
-    return <Navigate to="/login" replace />;
+    console.log("No user found, redirecting to register");
+    return <Navigate to="/register" replace />;
   }
 
-  if (requireAdmin && user.role !== 'admin') {
+  if (requireAdmin) {
     return <Navigate to="/dashboard" replace />;
   }
 
+  return children;
+};
+
+const UnauthenticatedRoute = ({ children }: { children: React.ReactNode }) => {
+  const { user } = useAuth();
+  if (user) {
+    return <Navigate to="/dashboard" replace />;
+  }
   return children;
 };
 
@@ -38,10 +43,6 @@ function App() {
           <BrowserRouter>
             <Routes>
               <Route element={<Layout />}>
-                <Route path="/" element={<HomePage />} />
-                <Route path="/login" element={<LoginPage />} />
-                <Route path="/register" element={<RegisterPage />} />
-
                 <Route path="/dashboard" element={
                   <ProtectedRoute>
                     <DashboardPage />
@@ -49,34 +50,39 @@ function App() {
                 } />
 
                 <Route path="/create-quiz" element={
-                  <ProtectedRoute requireAdmin>
+                  <ProtectedRoute>
                     <CreateQuizPage />
                   </ProtectedRoute>
                 } />
 
+                <Route path="/favorites" element={
+                  <ProtectedRoute>
+                    <FavoritesPage />
+                  </ProtectedRoute>
+                } />
+
                 <Route path="/quiz/:quizId/setup" element={
-                    <ProtectedRoute>
-                        <QuizSetupPage />
-                    </ProtectedRoute>
+                  <ProtectedRoute>
+                    <QuizSetupPage />
+                  </ProtectedRoute>
                 } />
 
                 <Route path="/quiz/:quizId/play" element={
-                    <ProtectedRoute>
-                        <QuizSessionPage />
-                    </ProtectedRoute>
+                  <ProtectedRoute>
+                    <QuizSessionPage />
+                  </ProtectedRoute>
                 } />
 
                 <Route path="/quiz/:quizId/results/:attemptId" element={
-                    <ProtectedRoute>
-                        <ResultsPage />
-                    </ProtectedRoute>
-                } />
-
-                 <Route path="/admin" element={
-                  <ProtectedRoute requireAdmin>
-                    <AdminPage />
+                  <ProtectedRoute>
+                    <ResultsPage />
                   </ProtectedRoute>
                 } />
+
+                <Route path="/*" element={
+                  <UnauthenticatedRoute>
+                    <RegisterPage />
+                  </UnauthenticatedRoute>} />
               </Route>
             </Routes>
           </BrowserRouter>
