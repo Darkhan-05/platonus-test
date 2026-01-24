@@ -33,12 +33,12 @@ export function Navbar() {
           {user && (
             <div className="hidden md:flex items-center gap-4 text-sm font-medium">
               <Link to="/dashboard" className="transition-colors hover:text-foreground/80 text-foreground/60">Dashboard</Link>
-              {user.role === 'admin' && (
+              
                   <>
                     <Link to="/create-quiz" className="transition-colors hover:text-foreground/80 text-foreground/60">Create Quiz</Link>
                     <Link to="/admin" className="transition-colors hover:text-foreground/80 text-foreground/60">Admin</Link>
                   </>
-              )}
+            
             </div>
           )}
         </div>
@@ -79,7 +79,7 @@ export function Navbar() {
                 <DropdownMenuSeparator />
                 <DropdownMenuItem disabled>
                     <UserIcon className="mr-2 h-4 w-4" />
-                    {user.name} ({user.role})
+                    {user.name}
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleLogout}>
@@ -90,7 +90,6 @@ export function Navbar() {
             </DropdownMenu>
           ) : (
             <div className="flex items-center gap-2">
-                <Link to="/login"><Button variant="ghost">Login</Button></Link>
                 <Link to="/register"><Button>Sign Up</Button></Link>
             </div>
           )}
