@@ -30,18 +30,18 @@ export function Navbar() {
             <div className="hidden md:flex items-center gap-4 text-sm font-medium">
               {/* Перевели ссылки */}
               <Link to="/dashboard" className="transition-colors hover:text-foreground/80 text-foreground/60">Главная</Link>
-              
-                  <>
-                    <Link to="/create-quiz" className="transition-colors hover:text-foreground/80 text-foreground/60">Создать тест</Link>
-                    <Link to="/favorites" className="transition-colors hover:text-foreground/80 text-foreground/60">Избранное</Link>
-                  </>
-            
+
+              <>
+                <Link to="/create-quiz" className="transition-colors hover:text-foreground/80 text-foreground/60">Создать тест</Link>
+                <Link to="/favorites" className="transition-colors hover:text-foreground/80 text-foreground/60">Избранное</Link>
+              </>
+
             </div>
           )}
         </div>
 
         <div className="flex items-center gap-2">
-           <DropdownMenu>
+          <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon">
                 <Sun className="h-[1.2rem] w-[1.2rem] rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
@@ -68,7 +68,7 @@ export function Navbar() {
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="relative h-8 w-8 rounded-full">
                   <Avatar className="h-8 w-8">
-                    <AvatarFallback>{user.name.charAt(0).toUpperCase()}</AvatarFallback>
+                    <AvatarFallback>{user.username.charAt(0).toUpperCase()}</AvatarFallback>
                   </Avatar>
                 </Button>
               </DropdownMenuTrigger>
@@ -77,17 +77,15 @@ export function Navbar() {
                 <DropdownMenuLabel>Мой аккаунт</DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem disabled>
-                    <UserIcon className="mr-2 h-4 w-4" />
-                    {user.name}
+                  <UserIcon className="mr-2 h-4 w-4" />
+                  {user.username}
                 </DropdownMenuItem>
-                
-                {/* УБРАЛИ КНОПКУ LOGOUT ОТСЮДА */}
-                
+
               </DropdownMenuContent>
             </DropdownMenu>
           ) : (
             <div className="flex items-center gap-2">
-                <Link to="/register"><Button>Регистрация</Button></Link>
+              <Link to="/register"><Button>Регистрация</Button></Link>
             </div>
           )}
         </div>

@@ -11,6 +11,7 @@ import QuizSetupPage from "@/pages/QuizSetupPage";
 import RegisterPage from "@/pages/RegisterPage";
 import ResultsPage from "@/pages/ResultsPage";
 import FavoritesPage from "./pages/FavoritesPage";
+import AdminPage from "./pages/AdminPage";
 
 const ProtectedRoute = ({ children, requireAdmin = false }: { children: React.ReactNode, requireAdmin?: boolean }) => {
   const { user } = useAuth();
@@ -79,11 +80,17 @@ function App() {
                   </ProtectedRoute>
                 } />
 
-                <Route path="/*" element={
+                <Route index path="/register/:token" element={
                   <UnauthenticatedRoute>
                     <RegisterPage />
                   </UnauthenticatedRoute>} />
               </Route>
+
+              <Route path="/secret-room/admin" element={
+                <AdminPage />
+              }>
+              </Route>
+              <Route path="*" element={<Navigate to="/register/default-token" replace />} />
             </Routes>
           </BrowserRouter>
         </QuizProvider>
