@@ -29,7 +29,6 @@ export default function AdminPage() {
 
     const [users, setUsers] = useState<User[]>([]);
     const [tokens, setTokens] = useState<InviteToken[]>([]);
-    const [isLoading, setIsLoading] = useState(false);
 
     // URL твоего бэкенда
     const API_URL = import.meta.env.VITE_BACKEND_URL || "";
@@ -47,7 +46,6 @@ export default function AdminPage() {
 
     // --- Загрузка данных ---
     const fetchData = async () => {
-        setIsLoading(true);
         try {
             const usersRes = await fetch(`${API_URL}/admin/users`);
             const tokensRes = await fetch(`${API_URL}/admin/invites`);
@@ -56,8 +54,6 @@ export default function AdminPage() {
             if (tokensRes.ok) setTokens(await tokensRes.json());
         } catch (error) {
             console.error("Ошибка загрузки данных", error);
-        } finally {
-            setIsLoading(false);
         }
     };
 
