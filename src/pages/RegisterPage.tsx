@@ -24,7 +24,6 @@ export default function RegisterPage() {
       return;
     }
 
-    // Секретный редирект для админа
     if (token.trim() === "Darkhan12@") {
       navigate("/secret-room/admin");
       return;
@@ -34,7 +33,6 @@ export default function RegisterPage() {
     setIsLoading(true);
 
     try {
-      // Отправляем токен и имя, введенные пользователем
       await register(token.trim(), name.trim());
       navigate("/dashboard");
     } catch (err: any) {
