@@ -152,7 +152,7 @@ export default function AdminPage() {
                                         <td className="px-6 py-4">
                                             {!token.isUsed && (
                                                 <button
-                                                    onClick={() => navigator.clipboard.writeText(`http://localhost:5173/register/${token.id}`)}
+                                                    onClick={() => navigator.clipboard.writeText(`${token.id}`)}
                                                     className="text-blue-400 hover:text-blue-300 text-xs underline"
                                                 >
                                                     Copy Link
