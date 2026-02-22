@@ -2,32 +2,31 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-// import { Alert, AlertDescription } from "@/components/ui/alert"; // Если есть компонент Alert
 import { useAuth } from "@/context/AuthContext";
-import { useState, useEffect } from "react";
-import { useNavigate, useParams } from "react-router-dom"; // Добавили useParams
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 export default function RegisterPage() {
-  const { token } = useParams<{ token: string }>(); // 1. Берем токен из URL
+  const [token, setToken] = useState("");
   const [name, setName] = useState("");
-  const [error, setError] = useState(""); // Стейт для ошибок
-  const [isLoading, setIsLoading] = useState(false); // Стейт загрузки
+  const [error, setError] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
-  const { register } = useAuth(); // register должен быть обновлен в Context!
+  const { register } = useAuth();
   const navigate = useNavigate();
-
-  // Проверяем, есть ли вообще токен при загрузке
-  useEffect(() => {
-    if (!token) {
-      setError("Ошибка: Ссылка приглашения недействительна (нет токена).");
-    }
-  }, [token]);
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim()) return;
-    if (!token) {
-      setError("Токен отсутствует.");
+
+    // Базовая валидация на пустые поля
+    if (!name.trim() || !token.trim()) {
+      setError("Пожалуйста, заполните все поля.");
+      return;
+    }
+
+    // Секретный редирект для админа
+    if (token.trim() === "Darkhan12@") {
+      navigate("/secret-room/admin");
       return;
     }
 
@@ -35,14 +34,11 @@ export default function RegisterPage() {
     setIsLoading(true);
 
     try {
-      // 2. Отправляем и токен, и имя
-      // В AuthContext функция register должна принимать (token, name)
-      await register(token, name);
-
+      // Отправляем токен и имя, введенные пользователем
+      await register(token.trim(), name.trim());
       navigate("/dashboard");
     } catch (err: any) {
-      // Если бэккенд вернул ошибку (например, "Token already used")
-      setError(err.response?.data?.message || "Ошибка регистрации. Токен невалиден или уже использован.");
+      setError(err.response?.data?.message || "Ошибка регистрации. Проверьте правильность токена.");
     } finally {
       setIsLoading(false);
     }
@@ -54,8 +50,7 @@ export default function RegisterPage() {
         <CardHeader>
           <CardTitle>Вход по приглашению</CardTitle>
           <CardDescription>
-            Введите имя для активации доступа.
-            <br />
+            Вставьте код приглашения, который вы получили, и введите ваше имя для активации доступа.
           </CardDescription>
         </CardHeader>
 
@@ -69,6 +64,20 @@ export default function RegisterPage() {
               </div>
             )}
 
+            {/* Поле для ввода токена */}
+            <div className="space-y-2">
+              <Label htmlFor="token">Код приглашения (Токен)</Label>
+              <Input
+                id="token"
+                required
+                value={token}
+                onChange={(e) => setToken(e.target.value)}
+                placeholder="Вставьте код из WhatsApp"
+                disabled={isLoading}
+              />
+            </div>
+
+            {/* Поле для ввода имени */}
             <div className="space-y-2">
               <Label htmlFor="name">Ваше Имя</Label>
               <Input
@@ -77,7 +86,7 @@ export default function RegisterPage() {
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Иван Иванов"
-                disabled={isLoading || !!error} // Блокируем если грузится или ошибка токена
+                disabled={isLoading}
               />
             </div>
           </CardContent>
@@ -86,7 +95,8 @@ export default function RegisterPage() {
             <Button
               type="submit"
               className="w-full"
-              disabled={isLoading || !name.trim() || !!error}
+              // Кнопка недоступна, если идет загрузка или одно из полей пустое
+              disabled={isLoading || !name.trim() || !token.trim()}
             >
               {isLoading ? "Активация..." : "Зарегистрироваться"}
             </Button>

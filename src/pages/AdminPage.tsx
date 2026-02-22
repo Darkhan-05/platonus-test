@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { format } from "date-fns"; // Рекомендую поставить: npm i date-fns
+import { useState, useEffect } from "react";
+import { format } from "date-fns";
 
 // --- Типы данных (совпадают с твоей Prisma схемой) ---
 interface User {
@@ -24,25 +24,11 @@ interface InviteToken {
 
 export default function AdminPage() {
     // --- Состояния ---
-    const [password, setPassword] = useState("");
-    const [isAuthenticated, setIsAuthenticated] = useState(false);
-
     const [users, setUsers] = useState<User[]>([]);
     const [tokens, setTokens] = useState<InviteToken[]>([]);
 
     // URL твоего бэкенда
     const API_URL = import.meta.env.VITE_BACKEND_URL || "";
-
-    // --- Логика входа ---
-    const handleLogin = (e: React.FormEvent) => {
-        e.preventDefault();
-        if (password === "Darkhan12") {
-            setIsAuthenticated(true);
-            fetchData();
-        } else {
-            alert("Неверный пароль!");
-        }
-    };
 
     // --- Загрузка данных ---
     const fetchData = async () => {
@@ -56,6 +42,9 @@ export default function AdminPage() {
             console.error("Ошибка загрузки данных", error);
         }
     };
+    useEffect(() => {
+        fetchData();
+    }, []);
 
     // --- Создание токена ---
     const generateToken = async () => {
@@ -63,7 +52,6 @@ export default function AdminPage() {
             const res = await fetch(`${API_URL}/admin/generate-invite`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                // Можно передать expiration, например 7 дней
                 body: JSON.stringify({ expiresInDays: 7 }),
             });
 
@@ -94,29 +82,6 @@ export default function AdminPage() {
             console.error("Ошибка сети:", error);
         }
     };
-
-    // --- Если не авторизован, показываем "Сейф" ---
-    if (!isAuthenticated) {
-        return (
-            <div className="flex h-screen w-full items-center justify-center bg-gray-950 text-white">
-                <form onSubmit={handleLogin} className="flex flex-col gap-4 p-8 border border-gray-800 rounded-xl bg-gray-900 shadow-2xl">
-                    <h1 className="text-2xl font-bold text-center">🔒 Admin Access</h1>
-                    <input
-                        type="password"
-                        placeholder="Enter secret key..."
-                        className="p-3 rounded bg-gray-800 border border-gray-700 focus:outline-none focus:border-blue-500"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                    />
-                    <button type="submit" className="bg-blue-600 hover:bg-blue-500 p-3 rounded font-bold transition">
-                        Unlock
-                    </button>
-                </form>
-            </div>
-        );
-    }
-
-    // --- Если авторизован, показываем Дашборд ---
 
     // Подсчет статистики
     const totalUsers = users.length;
