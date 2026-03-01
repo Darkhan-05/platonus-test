@@ -10,242 +10,316 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { type Question, type Quiz } from "@/types";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Trash2, Loader2, FileText, Keyboard } from "lucide-react";
+import { Trash2, Loader2, FileText, Keyboard, CheckCircle2, Sparkles } from "lucide-react";
 import mammoth from "mammoth";
-import { generateQuestionVariants } from "@/lib/gemini";
+import { generateQuestionVariants, findCorrectAnswerIndex } from "@/lib/gemini";
+import { Switch } from "@/components/ui/switch";
 
 export default function CreateQuizPage() {
-  const { user } = useAuth();
-  const { addQuiz } = useQuiz();
-  const navigate = useNavigate();
+    const { user } = useAuth();
+    const { addQuiz } = useQuiz();
+    const navigate = useNavigate();
 
-  const [title, setTitle] = useState("");
-  const [rawText, setRawText] = useState("");
-  const [parsedQuestions, setParsedQuestions] = useState<Question[]>([]);
-  const [isProcessing, setIsProcessing] = useState(false);
+    const [title, setTitle] = useState("");
+    const [rawText, setRawText] = useState("");
+    const [parsedQuestions, setParsedQuestions] = useState<Question[]>([]);
+    const [isProcessing, setIsProcessing] = useState(false);
+    const [autoFindCorrect, setAutoFindCorrect] = useState(true);
 
-  const parseTextContent = async (text: string) => {
-    // Format: <question>Question Text <variant>Option 1 <variant>Option 2
-    const parts = text.split("<question>");
-    const newQuestions: Question[] = [];
+    const parseTextContent = async (text: string) => {
+        // Format: <question>Question Text <variant>Option 1 <variant>Option 2
+        const parts = text.split("<question>");
+        const newQuestions: Question[] = [];
 
-    for (const part of parts) {
-      if (!part.trim()) continue;
+        for (const part of parts) {
+            if (!part.trim()) continue;
 
-      const variantParts = part.split("<variant>");
-      const questionText = variantParts[0].trim();
-      let variants = variantParts.slice(1).map(v => v.trim()).filter(v => v);
+            const variantParts = part.split("<variant>");
+            const questionText = variantParts[0].trim();
+            let variants = variantParts.slice(1).map(v => v.trim()).filter(v => v);
 
-      if (questionText) {
-          if (variants.length === 0) {
-              // Gemini logic
-              try {
-                  const generatedVariants = await generateQuestionVariants(questionText);
-                  variants = generatedVariants;
-              } catch (e) {
-                  console.error("Gemini failed for", questionText);
-                  variants = ["Ошибка генерации вариантов"];
-              }
-          }
+            if (questionText) {
+                if (variants.length === 0) {
+                    // Gemini logic
+                    try {
+                        const generatedVariants = await generateQuestionVariants(questionText);
+                        variants = generatedVariants;
+                    } catch (e) {
+                        console.error("Gemini failed for", questionText);
+                        variants = ["Ошибка генерации вариантов"];
+                    }
+                }
 
-          if (variants.length > 0) {
-            newQuestions.push({
-                id: crypto.randomUUID(),
-                text: questionText,
-                variants: variants,
-                correctVariantIndex: 0 // Default to first
-            });
-          }
-      }
-    }
+                if (variants.length > 0) {
+                    let correctIndex = 0;
 
-    return newQuestions;
-  };
+                    // Auto-find correct answer if enabled and we have variants
+                    if (autoFindCorrect && variants.length > 1) {
+                        try {
+                            correctIndex = await findCorrectAnswerIndex(questionText, variants);
+                        } catch (e) {
+                            console.error("Auto-find failed for", questionText);
+                        }
+                    }
 
-  const handleTextParse = async () => {
-    setIsProcessing(true);
-    const questions = await parseTextContent(rawText);
-    setParsedQuestions([...parsedQuestions, ...questions]);
-    setRawText("");
-    setIsProcessing(false);
-  };
-
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const uploadedFile = e.target.files?.[0];
-    if (!uploadedFile) return;
-
-    setIsProcessing(true);
-    let text = "";
-
-    try {
-        if (uploadedFile.name.endsWith(".docx") || uploadedFile.name.endsWith(".doc")) {
-            const arrayBuffer = await uploadedFile.arrayBuffer();
-            const result = await mammoth.extractRawText({ arrayBuffer });
-            text = result.value;
-        } else if (uploadedFile.name.endsWith(".txt")) {
-            text = await uploadedFile.text();
-        } else {
-            alert("Неподдерживаемый формат. Пожалуйста, используйте .docx, .doc или .txt");
-            setIsProcessing(false);
-            return;
+                    newQuestions.push({
+                        id: crypto.randomUUID(),
+                        text: questionText,
+                        variants: variants,
+                        correctVariantIndex: correctIndex
+                    });
+                }
+            }
         }
 
-        const questions = await parseTextContent(text);
-        setParsedQuestions([...parsedQuestions, ...questions]);
-
-    } catch (err) {
-        console.error(err);
-        alert("Ошибка при чтении файла.");
-    }
-
-    setIsProcessing(false);
-  };
-
-  const handleSave = () => {
-    const newQuiz: Quiz = {
-        id: crypto.randomUUID(),
-        title: title || parsedQuestions[0].text,
-        questions: parsedQuestions,
-        createdBy: user?.id || "unknown",
-        createdAt: new Date().toISOString(),
-        timesSolved: 0
+        return newQuestions;
     };
 
-    addQuiz(newQuiz);
-    navigate("/dashboard");
-  };
+    const handleTextParse = async () => {
+        setIsProcessing(true);
+        const questions = await parseTextContent(rawText);
+        setParsedQuestions([...parsedQuestions, ...questions]);
+        setRawText("");
+        setIsProcessing(false);
+    };
 
-  const removeQuestion = (id: string) => {
-      setParsedQuestions(parsedQuestions.filter(q => q.id !== id));
-  };
+    const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const uploadedFile = e.target.files?.[0];
+        if (!uploadedFile) return;
 
-  return (
-    <div className="container mx-auto max-w-4xl space-y-8 py-8">
-        <div>
-            <h1 className="text-3xl font-bold">Создание нового теста</h1>
-            <p className="text-muted-foreground mt-2">
-                Добавляйте вопросы вручную или загрузите файл с готовым списком (.docx, .txt).
-            </p>
-        </div>
+        setIsProcessing(true);
+        let text = "";
 
-        <Card>
-            <CardHeader>
-                <CardTitle>Название теста</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-                <div className="space-y-2">
-                    <Input 
-                        value={title} 
-                        onChange={e => setTitle(e.target.value)} 
-                        placeholder="Например: Основы высшей математики" 
-                    />
-                </div>
-            </CardContent>
-        </Card>
+        try {
+            if (uploadedFile.name.endsWith(".docx") || uploadedFile.name.endsWith(".doc")) {
+                const arrayBuffer = await uploadedFile.arrayBuffer();
+                const result = await mammoth.extractRawText({ arrayBuffer });
+                text = result.value;
+            } else if (uploadedFile.name.endsWith(".txt")) {
+                text = await uploadedFile.text();
+            } else {
+                alert("Неподдерживаемый формат. Пожалуйста, используйте .docx, .doc или .txt");
+                setIsProcessing(false);
+                return;
+            }
 
-        <Card>
-            <CardHeader>
-                <CardTitle>Добавление вопросов</CardTitle>
-                <CardDescription className="leading-relaxed">
-                    Используйте формат: <br/><code>&lt;question&gt;Текст вопроса <br/>&lt;variant&gt;Правильный ответ<br/>&lt;variant&gt;Неправильный ответ</code>
-                    <br/>
-                    <span className="inline-block mt-2 p-2 bg-blue-50 text-blue-800 rounded text-xs font-medium dark:bg-blue-900/30 dark:text-blue-200">
-                        ✨ <b>Gemini AI:</b> Если вы укажете только тег <code>&lt;question&gt;</code> без вариантов, 
-                        искусственный интеллект сгенерирует ответы автоматически.
-                    </span>
-                </CardDescription>
-            </CardHeader>
-            <CardContent>
-                <Tabs defaultValue="manual">
-                    <TabsList className="grid w-full grid-cols-2">
-                        <TabsTrigger value="manual" className="flex items-center gap-2">
-                            <Keyboard className="h-4 w-4"/> Ручной ввод
-                        </TabsTrigger>
-                        <TabsTrigger value="upload" className="flex items-center gap-2">
-                            <FileText className="h-4 w-4"/> Загрузка файла
-                        </TabsTrigger>
-                    </TabsList>
-                    
-                    <TabsContent value="manual" className="space-y-4 pt-4">
-                        <div className="space-y-2">
-                            <Label>Текст с вопросами</Label>
-                            <Textarea
-                                className="min-h-[150px] font-mono text-sm leading-relaxed"
-                                placeholder={"<question>Сколько будет 2+2? \n<variant>4 \n<variant>3\n<question>Столица Франции?"}
-                                value={rawText}
-                                onChange={e => setRawText(e.target.value)}
-                            />
-                        </div>
-                        <Button onClick={handleTextParse} disabled={isProcessing}>
-                            {isProcessing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                            {isProcessing ? "Обработка..." : "Распознать вопросы"}
-                        </Button>
-                    </TabsContent>
-                    
-                    <TabsContent value="upload" className="space-y-4 pt-4">
-                        <div className="space-y-2">
-                            <Label>Выберите файл (.docx, .doc, .txt)</Label>
-                            <Input type="file" accept=".docx,.doc,.txt" onChange={handleFileUpload} disabled={isProcessing} />
-                        </div>
-                        {isProcessing && (
-                            <div className="flex items-center gap-2 text-sm text-muted-foreground animate-pulse">
-                                <Loader2 className="h-4 w-4 animate-spin"/>
-                                Анализируем файл и генерируем ответы с помощью AI...
-                            </div>
-                        )}
-                    </TabsContent>
-                </Tabs>
-            </CardContent>
-        </Card>
+            const questions = await parseTextContent(text);
+            setParsedQuestions([...parsedQuestions, ...questions]);
 
-        {parsedQuestions.length > 0 && (
+        } catch (err) {
+            console.error(err);
+            alert("Ошибка при чтении файла.");
+        }
+
+        setIsProcessing(false);
+    };
+
+    const handleSave = () => {
+        const newQuiz: Quiz = {
+            id: crypto.randomUUID(),
+            title: title || (parsedQuestions.length > 0 ? parsedQuestions[0].text : ""),
+            questions: parsedQuestions,
+            createdBy: user?.id || "unknown",
+            createdAt: new Date().toISOString(),
+            timesSolved: 0
+        };
+
+        addQuiz(newQuiz);
+        navigate("/dashboard");
+    };
+
+    const removeQuestion = (id: string) => {
+        setParsedQuestions(parsedQuestions.filter(q => q.id !== id));
+    };
+
+    const handleFindCorrectAnswer = async (questionId: string) => {
+        const question = parsedQuestions.find(q => q.id === questionId);
+        if (!question) return;
+
+        setIsProcessing(true);
+        try {
+            const correctIndex = await findCorrectAnswerIndex(question.text, question.variants);
+            setParsedQuestions(prev => prev.map(q =>
+                q.id === questionId ? { ...q, correctVariantIndex: correctIndex } : q
+            ));
+        } catch (err) {
+            console.error("Failed to find correct answer:", err);
+        } finally {
+            setIsProcessing(false);
+        }
+    };
+
+    return (
+        <div className="container mx-auto max-w-4xl space-y-8 py-8">
+            <div>
+                <h1 className="text-3xl font-bold">Создание нового теста</h1>
+                <p className="text-muted-foreground mt-2">
+                    Добавляйте вопросы вручную или загрузите файл с готовым списком (.docx, .txt).
+                </p>
+            </div>
+
             <Card>
                 <CardHeader>
-                    <CardTitle>Предпросмотр ({parsedQuestions.length} вопросов)</CardTitle>
-                    <CardDescription>Проверьте корректность распознавания перед сохранением.</CardDescription>
+                    <CardTitle>Название теста</CardTitle>
                 </CardHeader>
-                <CardContent>
-                    <ScrollArea className="h-[400px] rounded-md border p-4 bg-muted/10">
-                        <div className="space-y-6">
-                            {parsedQuestions.map((q, i) => (
-                                <div key={q.id} className="border-b pb-4 last:border-0 last:pb-0">
-                                    <div className="flex justify-between items-start gap-4">
-                                        <div className="font-semibold text-sm">
-                                            <span className="text-muted-foreground mr-2">#{i+1}</span>
-                                            {q.text}
-                                        </div>
-                                        <Button 
-                                            variant="ghost" 
-                                            size="icon" 
-                                            className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                                            onClick={() => removeQuestion(q.id)}
-                                        >
-                                            <Trash2 className="h-4 w-4" />
-                                        </Button>
-                                    </div>
-                                    <ul className="mt-3 space-y-1">
-                                        {q.variants.map((v, idx) => (
-                                            <li key={idx} className={`text-sm px-2 py-1 rounded ${idx === 0 ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 w-fit" : "text-muted-foreground"}`}>
-                                                {v} {idx === 0 && "✓ (Верный)"}
-                                            </li>
-                                        ))}
-                                    </ul>
-                                </div>
-                            ))}
-                        </div>
-                    </ScrollArea>
+                <CardContent className="space-y-4">
+                    <div className="space-y-2">
+                        <Input
+                            value={title}
+                            onChange={e => setTitle(e.target.value)}
+                            placeholder="Например: Основы высшей математики"
+                        />
+                    </div>
                 </CardContent>
             </Card>
-        )}
 
-        <div className="flex justify-end gap-4 pb-10">
-            <Button variant="outline" onClick={() => navigate("/dashboard")}>
-                Отмена
-            </Button>
-            <Button size="lg" onClick={handleSave} disabled={parsedQuestions.length === 0}>
-                Сохранить тест
-            </Button>
+            <Card>
+                <CardHeader>
+                    <CardTitle>Добавление вопросов</CardTitle>
+                    <CardDescription className="leading-relaxed">
+                        Используйте формат: <br /><code>&lt;question&gt;Текст вопроса <br />&lt;variant&gt;Правильный ответ<br />&lt;variant&gt;Неправильный ответ</code>
+                        <br />
+                        <span className="inline-block mt-2 p-2 bg-blue-50 text-blue-800 rounded text-xs font-medium dark:bg-blue-900/30 dark:text-blue-200">
+                            ✨ <b>Gemini AI:</b> Если вы укажете только тег <code>&lt;question&gt;</code> без вариантов,
+                            искусственный интеллект сгенерирует ответы автоматически.
+                        </span>
+                    </CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <Tabs defaultValue="manual">
+                        <TabsList className="grid w-full grid-cols-2">
+                            <TabsTrigger value="manual" className="flex items-center gap-2">
+                                <Keyboard className="h-4 w-4" /> Ручной ввод
+                            </TabsTrigger>
+                            <TabsTrigger value="upload" className="flex items-center gap-2">
+                                <FileText className="h-4 w-4" /> Загрузка файла
+                            </TabsTrigger>
+                        </TabsList>
+
+                        <TabsContent value="manual" className="space-y-4 pt-4">
+                            <div className="space-y-2">
+                                <Label>Текст с вопросами</Label>
+                                <Textarea
+                                    className="min-h-[150px] font-mono text-sm leading-relaxed"
+                                    placeholder={"<question>Сколько будет 2+2? \n<variant>4 \n<variant>3\n<question>Столица Франции?"}
+                                    value={rawText}
+                                    onChange={e => setRawText(e.target.value)}
+                                />
+                            </div>
+
+                            <div className="flex items-center justify-between p-3 rounded-lg border bg-blue-50/40 dark:bg-blue-900/10 border-blue-100 dark:border-blue-800/50">
+                                <div className="flex items-center gap-3">
+                                    <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-full text-blue-600 dark:text-blue-400">
+                                        <Sparkles className="h-4 w-4" />
+                                    </div>
+                                    <div>
+                                        <div className="text-sm font-medium">Auto-AI: Найти правильные ответы</div>
+                                        <div className="text-xs text-muted-foreground">Gemini автоматически выделит верный вариант</div>
+                                    </div>
+                                </div>
+                                <Switch
+                                    checked={autoFindCorrect}
+                                    onCheckedChange={setAutoFindCorrect}
+                                />
+                            </div>
+
+                            <Button onClick={handleTextParse} disabled={isProcessing} className="w-full sm:w-auto">
+                                {isProcessing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                {isProcessing ? "Обработка и поиск ответов..." : "Распознать вопросы"}
+                            </Button>
+                        </TabsContent>
+
+                        <TabsContent value="upload" className="space-y-4 pt-4">
+                            <div className="space-y-2">
+                                <Label>Выберите файл (.docx, .doc, .txt)</Label>
+                                <Input type="file" accept=".docx,.doc,.txt" onChange={handleFileUpload} disabled={isProcessing} />
+                            </div>
+
+                            <div className="flex items-center justify-between p-3 rounded-lg border bg-blue-50/40 dark:bg-blue-900/10 border-blue-100 dark:border-blue-800/50">
+                                <div className="flex items-center gap-3">
+                                    <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-full text-blue-600 dark:text-blue-400">
+                                        <Sparkles className="h-4 w-4" />
+                                    </div>
+                                    <div className="text-sm font-medium">Auto-AI: Найти правильные ответы</div>
+                                    <div className="text-xs text-muted-foreground">Gemini автоматически выделит верный вариант</div>
+                                </div>
+                                <Switch
+                                    checked={autoFindCorrect}
+                                    onCheckedChange={setAutoFindCorrect}
+                                />
+                            </div>
+
+                            {isProcessing && (
+                                <div className="flex items-center gap-2 text-sm text-muted-foreground animate-pulse">
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                    Анализируем файл и находим верные ответы с помощью AI...
+                                </div>
+                            )}
+                        </TabsContent>
+                    </Tabs>
+                </CardContent>
+            </Card>
+
+            {parsedQuestions.length > 0 && (
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Предпросмотр ({parsedQuestions.length} вопросов)</CardTitle>
+                        <CardDescription>Проверьте корректность распознавания перед сохранением.</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <ScrollArea className="h-[400px] rounded-md border p-4 bg-muted/10">
+                            <div className="space-y-6">
+                                {parsedQuestions.map((q, i) => (
+                                    <div key={q.id} className="border-b pb-4 last:border-0 last:pb-0">
+                                        <div className="flex justify-between items-start gap-4">
+                                            <div className="font-semibold text-sm">
+                                                <span className="text-muted-foreground mr-2">#{i + 1}</span>
+                                                {q.text}
+                                            </div>
+                                            <div className="flex gap-1">
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="h-8 w-8 text-blue-500 hover:text-blue-700 hover:bg-blue-50"
+                                                    onClick={() => handleFindCorrectAnswer(q.id)}
+                                                    disabled={isProcessing}
+                                                    title="Найти правильный ответ через AI"
+                                                >
+                                                    {isProcessing ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
+                                                </Button>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                                                    onClick={() => removeQuestion(q.id)}
+                                                >
+                                                    <Trash2 className="h-4 w-4" />
+                                                </Button>
+                                            </div>
+                                        </div>
+                                        <ul className="mt-3 space-y-1">
+                                            {q.variants.map((v, idx) => (
+                                                <li key={idx} className={`text-sm px-2 py-1 rounded ${idx === q.correctVariantIndex ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 w-fit" : "text-muted-foreground"}`}>
+                                                    {v} {idx === q.correctVariantIndex && "✓ (Верный)"}
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    </div>
+                                ))}
+                            </div>
+                        </ScrollArea>
+                    </CardContent>
+                </Card>
+            )}
+
+            <div className="flex justify-end gap-4 pb-10">
+                <Button variant="outline" onClick={() => navigate("/dashboard")}>
+                    Отмена
+                </Button>
+                <Button size="lg" onClick={handleSave} disabled={parsedQuestions.length === 0}>
+                    Сохранить тест
+                </Button>
+            </div>
         </div>
-    </div>
-  );
+    );
 }

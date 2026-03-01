@@ -30,7 +30,7 @@ export async function generateQuestionVariants(questionText: string): Promise<st
 
     try {
         // Используем стабильную версию 1.5 Flash (она лучше всего слушается инструкций по формату)
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${API_KEY}`, {
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${API_KEY}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -42,7 +42,7 @@ export async function generateQuestionVariants(questionText: string): Promise<st
 
         if (data.candidates && data.candidates[0].content) {
             const text = data.candidates[0].content.parts[0].text;
-            
+
             // Лог в консоль, чтобы вы видели, что прислал ИИ (нажмите F12 в браузере)
             console.log("Gemini Raw Response:", text);
 
@@ -55,12 +55,59 @@ export async function generateQuestionVariants(questionText: string): Promise<st
                 return variants.slice(0, 4);
             }
         }
-        
+
         console.error("Failed to parse variants. Raw text:", data);
         return ["Ошибка парсинга", "Попробуйте", "другой", "вопрос"];
 
     } catch (error) {
         console.error("Network Error:", error);
         return ["Ошибка сети", "Проверьте", "консоль", "..."];
+    }
+}
+
+export async function findCorrectAnswerIndex(questionText: string, variants: string[]): Promise<number> {
+    const API_KEY = import.meta.env.VITE_GEMINI_API_KEY || "";
+
+    if (!API_KEY) {
+        console.warn("Gemini API Key missing.");
+        return 0; // Fallback to first
+    }
+
+    const prompt = `
+    You are a quiz assistant. 
+    Question: "${questionText}"
+    Variants:
+    ${variants.map((v, i) => `${i + 1}. ${v}`).join("\n")}
+
+    Task: Identify the correct answer from the list of variants above.
+    Return ONLY the index (number) of the correct variant (1-based index).
+    Example Output: 3
+    `;
+
+    try {
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${API_KEY}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                contents: [{ parts: [{ text: prompt }] }]
+            })
+        });
+
+        const data = await response.json();
+
+        if (data.candidates && data.candidates[0].content) {
+            const text = data.candidates[0].content.parts[0].text.trim();
+            const indexMatch = text.match(/\d+/);
+            if (indexMatch) {
+                const index = parseInt(indexMatch[0], 10) - 1; // Convert to 0-based
+                if (index >= 0 && index < variants.length) {
+                    return index;
+                }
+            }
+        }
+        return 0;
+    } catch (error) {
+        console.error("Gemini Find Answer Error:", error);
+        return 0;
     }
 }
