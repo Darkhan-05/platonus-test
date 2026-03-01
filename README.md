@@ -1,73 +1,69 @@
-# React + TypeScript + Vite
+# Platonus Test
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+**Platonus Test** — это современная платформа для создания и прохождения тестов, усиленная искусственным интеллектом Gemini. Проект позволяет быстро генерировать сформировать, сгенерировать тесты удобно их проходить с отслеживанием результатов.
 
-Currently, two official plugins are available:
+![React](https://img.shields.io/badge/React-19-blue?logo=react)
+![TypeScript](https://img.shields.io/badge/TypeScript-5.x-blue?logo=typescript)
+![Vite](https://img.shields.io/badge/Vite-7.x-646CFF?logo=vite)
+![Tailwind CSS](https://img.shields.io/badge/Tailwind-3.x-38B2AC?logo=tailwind-css)
+![Gemini AI](https://img.shields.io/badge/AI-Gemini_2.0-orange)
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## ✨ Основные возможности
 
-## React Compiler
+### 🤖 Интеллектуальное создание тестов (AI-Powered)
+- **Автогенерация вариантов**: Укажите только текст вопроса, и Gemini подготовит 1 правильный и 3 правдоподобных неправильных ответа.
+- **Auto-AI Поиск ответа**: При импорте готовых вопросов система автоматически определит верный вариант среди предоставленных.
+- **Массовый импорт**: Поддержка загрузки вопросов из файлов `.docx`, `.doc` и `.txt`.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+### 📝 Управление и прохождение
+- **Личный кабинет (Dashboard)**: Список доступных тестов, статистика прохождений и избранное.
+- **Конструктор тестов**: Гибкий интерфейс для редактирования вопросов, добавления новых и удаления лишних.
+- **Настройка сессии**: Выбор количества вопросов, времени и режима случайного порядка.
+- **Результаты**: Детальный отчет после каждого прохождения с подсчетом баллов.
 
-## Expanding the ESLint configuration
+## 🚀 Технологический стек
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+- **Frontend**: React 19, TypeScript
+- **Сборка**: Vite 7
+- **Стилизация**: Tailwind CSS, Shadcn UI (Radix UI)
+- **Иконки**: Lucide React
+- **AI**: Google Gemini API (через `generativelanguage.googleapis.com`)
+- **Парсинг документов**: Mammoth.js (для .docx)
+- **Роутинг**: React Router 7
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+## 🛠 Установка и запуск
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+### 1. Клонирование репозитория
+```bash
+git clone https://github.com/your-repo/platonus-test.git
+cd platonus-test
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
-
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+### 2. Установка зависимостей
+```bash
+npm install
 ```
+
+### 3. Настройка окружения
+Создайте файл `.env` в корневом каталоге и добавьте ваш ключ API Gemini:
+```env
+VITE_GEMINI_API_KEY=ваш_ключ_api
+```
+
+### 4. Запуск в режиме разработки
+```bash
+npm run dev
+```
+Приложение будет доступно по адресу `http://localhost:5173`.
+
+## 📁 Структура проекта
+
+- `src/components/ui` — Переиспользуемые UI-компоненты (кнопки, вводы, карточки и т.д.).
+- `src/context` — Контексты для управления состоянием авторизации и тестов.
+- `src/lib/gemini.ts` — Логика взаимодействия с Gemini AI.
+- `src/pages` — Страницы приложения (Dashboard, Create, Session и т.д.).
+- `src/types` — TypeScript интерфейсы и типы.
+
+## 📄 Лицензия
+
+Проект разработан для образовательных целей.
