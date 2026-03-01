@@ -13,15 +13,18 @@ import ResultsPage from "@/pages/ResultsPage";
 import FavoritesPage from "./pages/FavoritesPage";
 import AdminPage from "./pages/AdminPage";
 
-const ProtectedRoute = ({ children, requireAdmin = false }: { children: React.ReactNode, requireAdmin?: boolean }) => {
+const ProtectedRoute = ({ children, requireAdmin = false, allowGuest = false }: { children: React.ReactNode, requireAdmin?: boolean, allowGuest?: boolean }) => {
   const { user } = useAuth();
 
-  if (!user) {
+  if (!user && !allowGuest) {
     console.log("No user found, redirecting to register");
-    return <Navigate to="/register" replace />;
+    return <Navigate to="/register/default-token" replace />;
   }
 
   if (requireAdmin) {
+    // Current user state doesn't have roles explicitly shown in types, 
+    // but we can assume admin check happens here if needed.
+    // For now, redirecting out of admin if not admin.
     return <Navigate to="/dashboard" replace />;
   }
 
@@ -30,6 +33,7 @@ const ProtectedRoute = ({ children, requireAdmin = false }: { children: React.Re
 
 const UnauthenticatedRoute = ({ children }: { children: React.ReactNode }) => {
   const { user } = useAuth();
+  // We only redirect if we are SURE we are logged in.
   if (user) {
     return <Navigate to="/dashboard" replace />;
   }
@@ -45,13 +49,13 @@ function App() {
             <Routes>
               <Route element={<Layout />}>
                 <Route path="/dashboard" element={
-                  <ProtectedRoute>
+                  <ProtectedRoute allowGuest={true}>
                     <DashboardPage />
                   </ProtectedRoute>
                 } />
 
                 <Route path="/create-quiz" element={
-                  <ProtectedRoute>
+                  <ProtectedRoute allowGuest={true}>
                     <CreateQuizPage />
                   </ProtectedRoute>
                 } />
@@ -63,24 +67,30 @@ function App() {
                 } />
 
                 <Route path="/quiz/:quizId/setup" element={
-                  <ProtectedRoute>
+                  <ProtectedRoute allowGuest={true}>
                     <QuizSetupPage />
                   </ProtectedRoute>
                 } />
 
                 <Route path="/quiz/:quizId/play" element={
-                  <ProtectedRoute>
+                  <ProtectedRoute allowGuest={true}>
                     <QuizSessionPage />
                   </ProtectedRoute>
                 } />
 
                 <Route path="/quiz/:quizId/results/:attemptId" element={
-                  <ProtectedRoute>
+                  <ProtectedRoute allowGuest={true}>
                     <ResultsPage />
                   </ProtectedRoute>
                 } />
 
-                <Route index path="/register/:token" element={
+                <Route path="/register/:token" element={
+                  <UnauthenticatedRoute>
+                    <RegisterPage />
+                  </UnauthenticatedRoute>} />
+
+                {/* Catch-all for /register without token */}
+                <Route path="/register" element={
                   <UnauthenticatedRoute>
                     <RegisterPage />
                   </UnauthenticatedRoute>} />
@@ -90,7 +100,7 @@ function App() {
                 <AdminPage />
               }>
               </Route>
-              <Route path="*" element={<Navigate to="/register/default-token" replace />} />
+              <Route path="*" element={<Navigate to="/dashboard" replace />} />
             </Routes>
           </BrowserRouter>
         </QuizProvider>

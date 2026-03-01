@@ -121,7 +121,7 @@ export default function QuizSessionPage() {
         addAttempt({
             id: attemptId,
             quizId: quiz.id,
-            userId: user?.id || "anonymous",
+            userId: user?.id || "guest",
             score,
             totalQuestions: questions.length,
             answers,

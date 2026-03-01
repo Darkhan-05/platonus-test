@@ -16,10 +16,12 @@ import { generateQuestionVariants, findCorrectAnswerIndex } from "@/lib/gemini";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { Progress } from "@/components/ui/progress";
+import { Info } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 export default function CreateQuizPage() {
     const { user } = useAuth();
-    const { addQuiz } = useQuiz();
+    const { addQuiz, isGuestLimitReached } = useQuiz();
     const navigate = useNavigate();
     const { toast } = useToast();
 
@@ -30,6 +32,9 @@ export default function CreateQuizPage() {
     const [autoFindCorrect, setAutoFindCorrect] = useState(true);
     const [processProgress, setProcessProgress] = useState(0);
     const [statusMessage, setStatusMessage] = useState("");
+
+    const isGuest = !user;
+    const limitReached = isGuest && isGuestLimitReached();
 
     const parseTextContent = async (text: string) => {
         // Format: <question>Question Text <variant>Option 1 <variant>Option 2
@@ -90,7 +95,17 @@ export default function CreateQuizPage() {
         setIsProcessing(true);
         setProcessProgress(0);
         try {
-            const questions = await parseTextContent(rawText);
+            let questions = await parseTextContent(rawText);
+
+            if (isGuest && questions.length > 300) {
+                questions = questions.slice(0, 300);
+                toast({
+                    title: "Лимит превышен",
+                    description: "Для гостей доступно максимум 300 вопросов. Лишние вопросы были обрезаны.",
+                    variant: "destructive"
+                });
+            }
+
             if (questions.length > 0) {
                 setParsedQuestions([...parsedQuestions, ...questions]);
                 setRawText("");
@@ -142,7 +157,17 @@ export default function CreateQuizPage() {
                 return;
             }
 
-            const questions = await parseTextContent(text);
+            let questions = await parseTextContent(text);
+
+            if (isGuest && questions.length > 300) {
+                questions = questions.slice(0, 300);
+                toast({
+                    title: "Лимит превышен",
+                    description: "Для гостей доступно максимум 300 вопросов. Лишние вопросы были обрезаны.",
+                    variant: "destructive"
+                });
+            }
+
             if (questions.length > 0) {
                 setParsedQuestions([...parsedQuestions, ...questions]);
                 toast({
@@ -181,7 +206,10 @@ export default function CreateQuizPage() {
                 timesSolved: 0
             };
 
-            addQuiz(newQuiz);
+            addQuiz({
+                ...newQuiz,
+                createdBy: isGuest ? "guest" : (user?.id || "unknown")
+            });
             toast({
                 title: "Тест сохранен!",
                 description: "Вы можете найти его в своем дашборде.",
@@ -235,6 +263,16 @@ export default function CreateQuizPage() {
                 <p className="text-muted-foreground mt-2">
                     Добавляйте вопросы вручную или загрузите файл с готовым списком (.docx, .txt).
                 </p>
+                {isGuest && (
+                    <Alert className="mt-4 bg-yellow-50 dark:bg-yellow-900/10 border-yellow-200 dark:border-yellow-800">
+                        <Info className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />
+                        <AlertTitle>Гостевой доступ</AlertTitle>
+                        <AlertDescription>
+                            Вы создаете тест как гость. Вы можете создать только <b>один</b> тест (макс. 300 вопросов).
+                            Зарегистрируйтесь, чтобы сохранять неограниченное количество тестов навсегда.
+                        </AlertDescription>
+                    </Alert>
+                )}
             </div>
 
             <Card className="shadow-sm">
@@ -464,10 +502,10 @@ export default function CreateQuizPage() {
                 <Button
                     size="lg"
                     onClick={handleSave}
-                    disabled={parsedQuestions.length === 0}
+                    disabled={parsedQuestions.length === 0 || limitReached}
                     className="bg-blue-600 hover:bg-blue-700 px-10 shadow-lg shadow-blue-500/20"
                 >
-                    Сохранить тест
+                    {limitReached ? "Лимит исчерпан" : "Сохранить тест"}
                 </Button>
             </div>
         </div>

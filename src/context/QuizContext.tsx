@@ -11,6 +11,8 @@ interface QuizContextType {
   getAttemptsForUser: (userId: string) => Attempt[];
   getAttemptsForQuiz: (quizId: string) => Attempt[];
   createFavoritesQuiz: (favoriteIds: string[]) => Quiz | null;
+  isGuestLimitReached: () => boolean;
+  isGuestAttemptLimitReached: () => boolean;
 }
 
 const QuizContext = createContext<QuizContextType | undefined>(undefined);
@@ -50,86 +52,96 @@ export const QuizProvider = ({ children }: { children: React.ReactNode }) => {
     // Update quiz stats (timesSolved)
     // Only update if it's a real quiz, not the favorites temp quiz
     const updatedQuizzes = quizzes.map(q => {
-        if (q.id === attempt.quizId) {
-            return { ...q, timesSolved: (q.timesSolved || 0) + 1 };
-        }
-        return q;
+      if (q.id === attempt.quizId) {
+        return { ...q, timesSolved: (q.timesSolved || 0) + 1 };
+      }
+      return q;
     });
     setQuizzes(updatedQuizzes);
     localStorage.setItem('platonus_quizzes', JSON.stringify(updatedQuizzes));
   };
 
   const getQuiz = (id: string) => {
-      // Check if it's the favorites quiz stored in session/mem or just generate on fly if requested?
-      // Actually, for "Play" page to work, it expects getQuiz to return something.
-      // If we create a temporary quiz, we might need to add it to state temporarily or handle it here.
-      return quizzes.find(q => q.id === id);
+    // Check if it's the favorites quiz stored in session/mem or just generate on fly if requested?
+    // Actually, for "Play" page to work, it expects getQuiz to return something.
+    // If we create a temporary quiz, we might need to add it to state temporarily or handle it here.
+    return quizzes.find(q => q.id === id);
   };
 
   const getAttemptsForUser = (userId: string) => {
-      return attempts.filter(a => a.userId === userId);
+    return attempts.filter(a => a.userId === userId);
   };
 
   const getAttemptsForQuiz = (quizId: string) => {
-      return attempts.filter(a => a.quizId === quizId);
+    return attempts.filter(a => a.quizId === quizId);
   };
 
   const createFavoritesQuiz = (favoriteIds: string[]) => {
-      if (favoriteIds.length === 0) return null;
+    if (favoriteIds.length === 0) return null;
 
-      const favoriteQuestions: Question[] = [];
+    const favoriteQuestions: Question[] = [];
 
-      quizzes.forEach(quiz => {
-          quiz.questions.forEach(q => {
-              if (favoriteIds.includes(q.id)) {
-                  // Avoid duplicates if multiple quizzes have same question ID (unlikely with UUID but possible)
-                  if (!favoriteQuestions.find(fq => fq.id === q.id)) {
-                      favoriteQuestions.push(q);
-                  }
-              }
-          });
+    quizzes.forEach(quiz => {
+      quiz.questions.forEach(q => {
+        if (favoriteIds.includes(q.id)) {
+          // Avoid duplicates if multiple quizzes have same question ID (unlikely with UUID but possible)
+          if (!favoriteQuestions.find(fq => fq.id === q.id)) {
+            favoriteQuestions.push(q);
+          }
+        }
       });
+    });
 
-      if (favoriteQuestions.length === 0) return null;
+    if (favoriteQuestions.length === 0) return null;
 
-      const favQuiz: Quiz = {
-          id: "favorites-quiz",
-          title: "My Favorites",
-          questions: favoriteQuestions,
-          createdBy: "system",
-          createdAt: new Date().toISOString(),
-          timesSolved: 0
-      };
+    const favQuiz: Quiz = {
+      id: "favorites-quiz",
+      title: "My Favorites",
+      questions: favoriteQuestions,
+      createdBy: "system",
+      createdAt: new Date().toISOString(),
+      timesSolved: 0
+    };
 
-      // Add to state temporarily so it can be found by ID
-      // We check if it exists first to update it
-      const existingIdx = quizzes.findIndex(q => q.id === "favorites-quiz");
-      let newQuizzes = [...quizzes];
-      if (existingIdx >= 0) {
-          newQuizzes[existingIdx] = favQuiz;
-      } else {
-          newQuizzes.push(favQuiz);
-      }
-      setQuizzes(newQuizzes);
+    // Add to state temporarily so it can be found by ID
+    // We check if it exists first to update it
+    const existingIdx = quizzes.findIndex(q => q.id === "favorites-quiz");
+    let newQuizzes = [...quizzes];
+    if (existingIdx >= 0) {
+      newQuizzes[existingIdx] = favQuiz;
+    } else {
+      newQuizzes.push(favQuiz);
+    }
+    setQuizzes(newQuizzes);
 
-      // We don't save this to localStorage to keep it ephemeral session-based,
-      // OR we save it so refresh works. Let's save it for simplicity.
-      localStorage.setItem('platonus_quizzes', JSON.stringify(newQuizzes));
+    // We don't save this to localStorage to keep it ephemeral session-based,
+    // OR we save it so refresh works. Let's save it for simplicity.
+    localStorage.setItem('platonus_quizzes', JSON.stringify(newQuizzes));
 
-      return favQuiz;
+    return favQuiz;
+  };
+
+  const isGuestLimitReached = () => {
+    return quizzes.filter(q => q.createdBy === "guest").length >= 1;
+  };
+
+  const isGuestAttemptLimitReached = () => {
+    return attempts.filter(a => a.userId === "guest").length >= 3;
   };
 
   return (
     <QuizContext.Provider value={{
-        quizzes,
-        attempts,
-        addQuiz,
-        deleteQuiz,
-        addAttempt,
-        getQuiz,
-        getAttemptsForUser,
-        getAttemptsForQuiz,
-        createFavoritesQuiz
+      quizzes,
+      attempts,
+      addQuiz,
+      deleteQuiz,
+      addAttempt,
+      getQuiz,
+      getAttemptsForUser,
+      getAttemptsForQuiz,
+      createFavoritesQuiz,
+      isGuestLimitReached,
+      isGuestAttemptLimitReached
     }}>
       {children}
     </QuizContext.Provider>
