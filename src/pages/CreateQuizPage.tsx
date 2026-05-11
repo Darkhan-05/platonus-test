@@ -44,7 +44,7 @@ export default function CreateQuizPage() {
         const totalSteps = parts.length;
         let completedSteps = 0;
 
-        const questions: (Question & { needsVariants: boolean; needsCorrectIndex: boolean })[] = parts.map((part, index) => {
+        const questions: (Question & { needsVariants: boolean; needsCorrectIndex: boolean })[] = parts.map((part, _) => {
             const variantParts = part.split("<variant>");
             const questionText = variantParts[0].trim();
             const variants = variantParts.slice(1).map(v => v.trim()).filter(v => v);

@@ -5,9 +5,19 @@ import { useAuth } from "@/context/AuthContext";
 import { useQuiz } from "@/context/QuizContext";
 import { useLanguage } from "@/context/LanguageContext";
 import { cn } from "@/lib/utils";
-import { ChevronLeft, ChevronRight, Flag, Heart, Loader2, Timer, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Flag, Heart, Loader2, Timer } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
+
+interface QuizState {
+    randomizeQuestions: boolean;
+    randomizeAnswers: boolean;
+    mode: 'practice' | 'exam';
+    timerMinutes: number;
+    selectedRange: string;
+    retakeMistakes: boolean;
+    previousAttemptId: string | null;
+}
 
 export default function QuizSessionPage() {
     const { quizId } = useParams();
@@ -68,6 +78,59 @@ export default function QuizSessionPage() {
     const [disabledVariants, setDisabledVariants] = useState<Record<string, number[]>>({});
 
     const currentQuestion = questions[currentIndex];
+
+    const isAnswered = currentQuestion ? answers[currentQuestion.id] !== undefined : false;
+    const canChangeAnswer = settings.mode === 'practice';
+
+    const handleAnswer = (variantIndex: number) => {
+        if (isAnswered && !canChangeAnswer) return;
+        setAnswers(prev => ({
+            ...prev,
+            [currentQuestion.id]: variantIndex
+        }));
+    };
+
+    const finishQuiz = () => {
+        const result = {
+            id: crypto.randomUUID(),
+            quizId: quiz!.id,
+            userId: user?.id || 'guest',
+            score: Object.entries(answers).reduce((acc, [qId, ansIdx]) => {
+                const q = quiz!.questions.find(q => q.id === qId);
+                return q && q.correctVariantIndex === ansIdx ? acc + 1 : acc;
+            }, 0),
+            totalQuestions: questions.length,
+            answers,
+            date: new Date().toISOString()
+        };
+        addAttempt(result);
+        navigate(`/quiz/${quizId}/results`, { state: { attemptId: result.id } });
+    };
+
+    const useFiftyFifty = () => {
+        if (!currentQuestion || fiftyFiftyUsed[currentQuestion.id] || isAnswered) return;
+
+        const correctIdx = currentQuestion.correctVariantIndex;
+        const variants = currentQuestion.displayVariants;
+        const incorrectIndices = variants
+            .map((_, i) => i)
+            .filter(i => variants[i].originalIndex !== correctIdx);
+
+        // Keep correct and one random incorrect
+        const toDisable = incorrectIndices
+            .sort(() => Math.random() - 0.5)
+            .slice(0, 2)
+            .map(i => variants[i].originalIndex);
+
+        setFiftyFiftyUsed(prev => ({ ...prev, [currentQuestion.id]: true }));
+        setDisabledVariants(prev => ({ ...prev, [currentQuestion.id]: toDisable }));
+    };
+
+    const formatTime = (seconds: number) => {
+        const mins = Math.floor(seconds / 60);
+        const secs = seconds % 60;
+        return `${mins}:${secs.toString().padStart(2, '0')}`;
+    };
 
     useEffect(() => {
         if (settings.mode === 'exam' && settings.timerMinutes > 0) {
