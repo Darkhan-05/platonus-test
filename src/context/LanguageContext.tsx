@@ -114,7 +114,7 @@ const translations = {
     errorSave: "Ошибка при сохранении.",
     errorAi: "Ошибка ИИ.",
     guestLimitQuestions: "Лимит гостя: 300 вопросов.",
-    guestLimitInfo: "Вы находитесь в гостевом режиме. Зарегистрируйтесь, чтобы сохранять результаты и создавать больше тестов.",
+    guestLimitInfo: "Вы находитесь в гостевом режиме. В этом режиме результаты тестов не сохраняются в истории, а количество вопросов при создании ограничено (максимум 300). Зарегистрируйтесь, чтобы получить полный доступ ко всем функциям и сохранять свой прогресс.",
     success: "Успех",
     error: "Ошибка",
     adminDashboard: "Панель администратора",
@@ -139,6 +139,7 @@ const translations = {
     quizPlaceholder: "<question>Сколько будет 2+2?\n<variant>4\n<variant>3\n<question>Столица Франции?",
     aiHint: "Если вы укажете только тег <question> без вариантов, искусственный интеллект сгенерирует ответы автоматически.",
     clearConfirm: "Вы уверены, что хотите очистить всё? Весь введенный текст и распознанные вопросы будут удалены.",
+    copied: "Ссылка скопирована в буфер обмена",
   },
   kk: {
     dashboard: "Басты бет",
@@ -245,7 +246,7 @@ const translations = {
     errorSave: "Сақтау қатесі.",
     errorAi: "ИИ қатесі.",
     guestLimitQuestions: "Қонақ шектеуі: 300 сұрақ.",
-    guestLimitInfo: "Сіз қонақ режиміндесіз. Нәтижелерді сақтау және көбірек тест жасау үшін тіркеліңіз.",
+    guestLimitInfo: "Сіз қонақ режиміндесіз. Бұл режимде тест нәтижелері тарихқа сақталмайды, ал тест жасау кезінде сұрақтар саны шектелген (максимум 300). Барлық функцияларға толық қол жеткізу және прогрессіңізді сақтау үшін тіркеліңіз.",
     success: "Сәтті",
     error: "Қате",
     adminDashboard: "Әкімші панелі",
@@ -270,6 +271,7 @@ const translations = {
     quizPlaceholder: "<question>2+2 нешеге тең?\n<variant>4\n<variant>3\n<question>Францияның астанасы қай қала?",
     aiHint: "Егер сіз нұсқаларсыз тек <question> тегін көрсетсеңіз, жасанды интеллект жауаптарды автоматты түрде жасайды.",
     clearConfirm: "Барлығын тазалағыңыз келетініне сенімдісіз бе? Барлық енгізілген мәтін мен танылған сұрақтар жойылады.",
+    copied: "Сілтеме буферге көшірілді",
   },
   en: {
     dashboard: "Dashboard",
@@ -376,7 +378,7 @@ const translations = {
     errorSave: "Save error.",
     errorAi: "AI Error.",
     guestLimitQuestions: "Guest limit: 300 questions.",
-    guestLimitInfo: "You are in guest mode. Register to save results and create more quizzes.",
+    guestLimitInfo: "You are in guest mode. In this mode, test results are not saved to history, and the number of questions when creating is limited (maximum 300). Register to get full access to all features and save your progress.",
     success: "Success",
     error: "Error",
     adminDashboard: "Admin Dashboard",
@@ -401,6 +403,7 @@ const translations = {
     quizPlaceholder: "<question>What is 2+2?\n<variant>4\n<variant>3\n<question>Capital of France?",
     aiHint: "If you specify only the <question> tag without variants, the AI will generate the answers automatically.",
     clearConfirm: "Are you sure you want to clear everything? All entered text and recognized questions will be deleted.",
+    copied: "Link copied to clipboard",
   }
 };
 
