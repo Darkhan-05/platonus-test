@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { useQuiz } from "@/context/QuizContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, Play, Clock, Shuffle, BookOpen, UserPlus, Info } from "lucide-react"; // Добавим иконки для красоты
+import { ArrowLeft, Play, Clock, Shuffle, BookOpen, UserPlus, Info, LayoutDashboard, Target } from "lucide-react"; // Добавим иконки для красоты
 import { useAuth } from "@/context/AuthContext";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
@@ -16,12 +16,17 @@ export default function QuizSetupPage() {
   const { getQuiz, isGuestAttemptLimitReached } = useQuiz();
   const { user } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const quiz = getQuiz(quizId || "");
 
   const [randomizeQuestions, setRandomizeQuestions] = useState(false);
   const [randomizeAnswers, setRandomizeAnswers] = useState(false);
   const [mode, setMode] = useState<"practice" | "exam">("practice");
   const [timerMinutes, setTimerMinutes] = useState<string>("0");
+  const [selectedRange, setSelectedRange] = useState<string>("all");
+
+  const retakeMistakes = location.state?.retakeMistakes || false;
+  const previousAttemptId = location.state?.attemptId || null;
 
   const isGuest = !user;
   const attemptLimitReached = isGuest && isGuestAttemptLimitReached();
@@ -46,10 +51,22 @@ export default function QuizSetupPage() {
         randomizeQuestions,
         randomizeAnswers,
         mode,
-        timerMinutes: parseInt(timerMinutes) || 0
+        timerMinutes: parseInt(timerMinutes) || 0,
+        selectedRange,
+        retakeMistakes,
+        previousAttemptId
       }
     });
   };
+
+  const questionCount = quiz.questions.length;
+  const ranges = [];
+  if (questionCount > 50) {
+    for (let i = 0; i < questionCount; i += 50) {
+      const end = Math.min(i + 50, questionCount);
+      ranges.push({ label: `Вопросы ${i + 1}-${end}`, value: `${i}-${end}` });
+    }
+  }
 
   return (
     <div className="flex justify-center items-center min-h-[60vh] p-4">
@@ -65,7 +82,17 @@ export default function QuizSetupPage() {
         </CardHeader>
 
         <CardContent className="space-y-8">
-          {attemptLimitReached && (
+          {retakeMistakes && (
+            <Alert className="bg-blue-50 dark:bg-blue-900/10 border-blue-200 dark:border-blue-800">
+              <Target className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+              <AlertTitle>Работа над ошибками</AlertTitle>
+              <AlertDescription>
+                Будут показаны только те вопросы, на которые вы ответили неверно в прошлый раз.
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {attemptLimitReached && !retakeMistakes && (
             <Alert className="bg-amber-50 dark:bg-amber-900/10 border-amber-200 dark:border-amber-800">
               <Info className="h-4 w-4 text-amber-600 dark:text-amber-400" />
               <AlertTitle>Лимит прохождений</AlertTitle>
@@ -74,6 +101,27 @@ export default function QuizSetupPage() {
                 Пожалуйста, <b>зарегистрируйтесь</b>, чтобы получить неограниченный доступ.
               </AlertDescription>
             </Alert>
+          )}
+
+          {/* Выбор участка (если много вопросов) */}
+          {ranges.length > 0 && !retakeMistakes && (
+            <div className="space-y-4">
+               <h3 className="text-sm font-medium leading-none flex items-center gap-2">
+                <LayoutDashboard className="h-4 w-4" /> Выберите участок теста
+              </h3>
+              <RadioGroup defaultValue="all" onValueChange={setSelectedRange} className="grid grid-cols-2 gap-2">
+                <div className="flex items-center space-x-2 border rounded-md p-2 hover:bg-muted/50 transition-colors">
+                  <RadioGroupItem value="all" id="range-all" />
+                  <Label htmlFor="range-all" className="flex-1 cursor-pointer text-xs font-semibold">Все вопросы ({questionCount})</Label>
+                </div>
+                {ranges.map((r, idx) => (
+                   <div key={idx} className="flex items-center space-x-2 border rounded-md p-2 hover:bg-muted/50 transition-colors">
+                    <RadioGroupItem value={r.value} id={`range-${idx}`} />
+                    <Label htmlFor={`range-${idx}`} className="flex-1 cursor-pointer text-xs font-semibold">{r.label}</Label>
+                  </div>
+                ))}
+              </RadioGroup>
+            </div>
           )}
 
           {/* Блок перемешивания */}

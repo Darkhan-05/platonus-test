@@ -13,13 +13,16 @@ interface QuizState {
     randomizeAnswers: boolean;
     mode: "practice" | "exam";
     timerMinutes: number;
+    selectedRange: string;
+    retakeMistakes: boolean;
+    previousAttemptId: string | null;
 }
 
 export default function QuizSessionPage() {
     const { quizId } = useParams();
     const location = useLocation();
     const navigate = useNavigate();
-    const { getQuiz, addAttempt } = useQuiz();
+    const { getQuiz, addAttempt, attempts } = useQuiz();
     const { user, toggleFavorite } = useAuth();
 
     // Получаем настройки или ставим значения по умолчанию
@@ -27,7 +30,10 @@ export default function QuizSessionPage() {
         randomizeQuestions: false,
         randomizeAnswers: false,
         mode: "practice",
-        timerMinutes: 0
+        timerMinutes: 0,
+        selectedRange: "all",
+        retakeMistakes: false,
+        previousAttemptId: null
     };
 
     const quiz = getQuiz(quizId || "");
@@ -37,12 +43,30 @@ export default function QuizSessionPage() {
         if (!quiz) return [];
         let qs = [...quiz.questions];
 
-        // Перемешивание вопросов
+        // 1. Работа над ошибками (фильтрация)
+        if (settings.retakeMistakes && settings.previousAttemptId) {
+            const prevAttempt = attempts.find(a => a.id === settings.previousAttemptId);
+            if (prevAttempt) {
+                // Оставляем только те вопросы, которые БЫЛИ в прошлой попытке И на которые ответили неверно
+                qs = qs.filter(q => 
+                    prevAttempt.answers[q.id] !== undefined && 
+                    prevAttempt.answers[q.id] !== q.correctVariantIndex
+                );
+            }
+        }
+
+        // 2. Деление на участки (слайсинг)
+        if (settings.selectedRange && settings.selectedRange !== "all") {
+            const [start, end] = settings.selectedRange.split("-").map(Number);
+            qs = qs.slice(start, end);
+        }
+
+        // 3. Перемешивание вопросов
         if (settings.randomizeQuestions) {
             qs = qs.sort(() => Math.random() - 0.5);
         }
 
-        // Обработка вариантов ответов
+        // 4. Обработка вариантов ответов
         return qs.map(q => {
             let variants = q.variants.map((v, i) => ({ text: v, originalIndex: i }));
             // Перемешивание вариантов
@@ -51,7 +75,7 @@ export default function QuizSessionPage() {
             }
             return { ...q, displayVariants: variants };
         });
-    }, [quiz, settings.randomizeQuestions, settings.randomizeAnswers]);
+    }, [quiz, settings, attempts]);
 
     const [currentIndex, setCurrentIndex] = useState(0);
     const [answers, setAnswers] = useState<Record<string, number>>({}); // qId -> originalIndex
@@ -81,9 +105,28 @@ export default function QuizSessionPage() {
     // Экран загрузки или ошибки
     if (!quiz || questions.length === 0) {
         return (
-            <div className="flex flex-col items-center justify-center min-h-[50vh] text-muted-foreground">
-                <Loader2 className="h-8 w-8 animate-spin mb-4" />
-                <p>Загрузка теста...</p>
+            <div className="flex flex-col items-center justify-center min-h-[50vh] text-muted-foreground p-6 text-center">
+                {quiz ? (
+                    <div className="space-y-4 animate-in fade-in zoom-in duration-300">
+                        <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
+                            <Flag className="h-8 w-8 opacity-20" />
+                        </div>
+                        <h3 className="text-xl font-bold text-foreground">Вопросы не найдены</h3>
+                        <p className="max-w-xs mx-auto">
+                            {settings.retakeMistakes 
+                                ? "Поздравляем! Похоже, в этом тесте у вас больше нет неверных ответов." 
+                                : "В выбранном диапазоне или тесте нет доступных вопросов."}
+                        </p>
+                        <Button onClick={() => navigate("/dashboard")} variant="outline" className="mt-4">
+                            Вернуться на главную
+                        </Button>
+                    </div>
+                ) : (
+                    <>
+                        <Loader2 className="h-8 w-8 animate-spin mb-4" />
+                        <p>Загрузка теста...</p>
+                    </>
+                )}
             </div>
         );
     }
