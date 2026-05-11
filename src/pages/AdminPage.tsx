@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { format } from "date-fns";
+import { useLanguage } from "@/context/LanguageContext";
 
 // --- Типы данных (совпадают с твоей Prisma схемой) ---
 interface User {
@@ -23,6 +24,7 @@ interface InviteToken {
 }
 
 export default function AdminPage() {
+    const { t } = useLanguage();
     // --- Состояния ---
     const [users, setUsers] = useState<User[]>([]);
     const [tokens, setTokens] = useState<InviteToken[]>([]);
@@ -39,7 +41,7 @@ export default function AdminPage() {
             if (usersRes.ok) setUsers(await usersRes.json());
             if (tokensRes.ok) setTokens(await tokensRes.json());
         } catch (error) {
-            console.error("Ошибка загрузки данных", error);
+            console.error(t('errorFileRead'), error);
         }
     };
     useEffect(() => {
@@ -56,16 +58,16 @@ export default function AdminPage() {
             });
 
             if (res.ok) {
-                alert("Токен создан!");
+                alert(t('tokenCreated'));
                 fetchData(); // Обновляем списки
             }
         } catch (error) {
-            alert("Ошибка создания токена");
+            alert(t('errorGeneratingToken'));
         }
     };
 
     const handleDelete = async (type: 'users' | 'invites', id: string) => {
-        if (!confirm("Вы уверены, что хотите удалить эту запись?")) return;
+        if (!confirm(t('deleteConfirm'))) return;
 
         try {
             const res = await fetch(`${API_URL}/admin/${type}/${id}`, {
@@ -76,10 +78,10 @@ export default function AdminPage() {
                 // Если удаление прошло успешно, обновляем данные
                 fetchData();
             } else {
-                alert("Ошибка при удалении (возможно, есть связанные данные)");
+                alert(t('errorDeleting'));
             }
         } catch (error) {
-            console.error("Ошибка сети:", error);
+            console.error(t('error'), error);
         }
     };
 
@@ -95,33 +97,33 @@ export default function AdminPage() {
                 {/* Header */}
                 <div className="flex justify-between items-center">
                     <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent">
-                        Admin Dashboard
+                        {t('adminDashboard')}
                     </h1>
                     <button
                         onClick={generateToken}
                         className="bg-green-600 hover:bg-green-500 text-white px-6 py-2 rounded-lg font-semibold shadow-lg transition transform hover:scale-105"
                     >
-                        + Создать Invite Token
+                        + {t('generateToken')}
                     </button>
                 </div>
 
                 {/* Stats Cards */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <Card title="Всего пользователей" value={totalUsers} icon="👥" color="bg-blue-900/50 border-blue-800" />
-                    <Card title="Использовано токенов" value={usedTokens} icon="✅" color="bg-green-900/50 border-green-800" />
-                    <Card title="Свободные токены" value={activeTokens} icon="🎫" color="bg-purple-900/50 border-purple-800" />
+                    <Card title={t('totalUsers')} value={totalUsers} icon="👥" color="bg-blue-900/50 border-blue-800" />
+                    <Card title={t('usedTokens')} value={usedTokens} icon="✅" color="bg-green-900/50 border-green-800" />
+                    <Card title={t('freeTokens')} value={activeTokens} icon="🎫" color="bg-purple-900/50 border-purple-800" />
                 </div>
 
                 {/* Секция: Токены */}
                 <div className="space-y-4">
-                    <h2 className="text-xl font-semibold text-gray-300">Последние токены</h2>
+                    <h2 className="text-xl font-semibold text-gray-300">{t('latestTokens')}</h2>
                     <div className="overflow-x-auto rounded-lg border border-gray-800">
                         <table className="w-full text-left text-sm text-gray-400">
                             <thead className="bg-gray-900 uppercase text-xs">
                                 <tr>
                                     <th className="px-6 py-3">Token Code</th>
                                     <th className="px-6 py-3">Status</th>
-                                    <th className="px-6 py-3">Used By</th>
+                                    <th className="px-6 py-3">{t('usedBy')}</th>
                                     <th className="px-6 py-3">Created / Expires</th>
                                     <th className="px-6 py-3">Link</th>
                                     <th className="px-6 py-3">Actions</th>
@@ -133,9 +135,9 @@ export default function AdminPage() {
                                         <td className="px-6 py-4 font-mono text-white">{token.code}</td>
                                         <td className="px-6 py-4">
                                             {token.isUsed ? (
-                                                <span className="px-2 py-1 rounded text-xs bg-red-900 text-red-200">Used</span>
+                                                <span className="px-2 py-1 rounded text-xs bg-red-900 text-red-200">{t('used')}</span>
                                             ) : (
-                                                <span className="px-2 py-1 rounded text-xs bg-green-900 text-green-200">Active</span>
+                                                <span className="px-2 py-1 rounded text-xs bg-green-900 text-green-200">{t('active')}</span>
                                             )}
                                         </td>
                                         <td className="px-6 py-4">
@@ -155,7 +157,7 @@ export default function AdminPage() {
                                                     onClick={() => navigator.clipboard.writeText(`${token.id}`)}
                                                     className="text-blue-400 hover:text-blue-300 text-xs underline"
                                                 >
-                                                    Copy Link
+                                                    {t('copyLink')}
                                                 </button>
                                             )}
                                         </td>
@@ -163,7 +165,7 @@ export default function AdminPage() {
                                             <button
                                                 onClick={() => handleDelete('invites', token.id)}
                                                 className="text-red-500 hover:text-red-400 p-2 rounded hover:bg-red-900/20 transition"
-                                                title="Удалить токен"
+                                                title={t('deleteToken')}
                                             >
                                                 🗑️
                                             </button>
@@ -177,7 +179,7 @@ export default function AdminPage() {
 
                 {/* Секция: Пользователи (Статистика по времени) */}
                 <div className="space-y-4">
-                    <h2 className="text-xl font-semibold text-gray-300">Пользователи (Хронология)</h2>
+                    <h2 className="text-xl font-semibold text-gray-300">{t('usersTimeline')}</h2>
                     <div className="rounded-lg border border-gray-800 bg-gray-900/30 p-4 max-h-96 overflow-y-auto">
                         {users.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).map(user => (
                             <div key={user.id} className="flex justify-between items-center py-2 border-b border-gray-800 last:border-0">
@@ -191,14 +193,14 @@ export default function AdminPage() {
                                     </div>
                                 </div>
                                 <div className="text-right">
-                                    <p className="text-xs text-gray-400">Зарегистрирован</p>
+                                    <p className="text-xs text-gray-400">{t('registeredAt')}</p>
                                     <p className="text-sm text-gray-300">{format(new Date(user.createdAt), "dd MMM HH:mm")}</p>
                                 </div>
                                 <div className="flex items-center gap-2">
                                     <button
                                         onClick={() => handleDelete('users', user.id)}
                                         className="text-gray-500 hover:text-red-500 p-2 transition"
-                                        title="Удалить пользователя"
+                                        title={t('deleteUser')}
                                     >
                                         ✕
                                     </button>
