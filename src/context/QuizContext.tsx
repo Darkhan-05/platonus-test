@@ -13,6 +13,8 @@ interface QuizContextType {
   createFavoritesQuiz: (favoriteIds: string[]) => Quiz | null;
   isGuestLimitReached: () => boolean;
   isGuestAttemptLimitReached: () => boolean;
+  isGuestAiLimitReached: () => boolean;
+  incrementGuestAiUsage: () => void;
 }
 
 const QuizContext = createContext<QuizContextType | undefined>(undefined);
@@ -20,6 +22,7 @@ const QuizContext = createContext<QuizContextType | undefined>(undefined);
 export const QuizProvider = ({ children }: { children: React.ReactNode }) => {
   const [quizzes, setQuizzes] = useState<Quiz[]>([]);
   const [attempts, setAttempts] = useState<Attempt[]>([]);
+  const [guestAiUsage, setGuestAiUsage] = useState<number>(0);
 
   useEffect(() => {
     const storedQuizzes = localStorage.getItem('platonus_quizzes');
@@ -29,6 +32,10 @@ export const QuizProvider = ({ children }: { children: React.ReactNode }) => {
     const storedAttempts = localStorage.getItem('platonus_attempts');
     if (storedAttempts) {
       setAttempts(JSON.parse(storedAttempts));
+    }
+    const storedAiUsage = localStorage.getItem('platonus_guest_ai_usage');
+    if (storedAiUsage) {
+      setGuestAiUsage(parseInt(storedAiUsage, 10));
     }
   }, []);
 
@@ -126,7 +133,17 @@ export const QuizProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   const isGuestAttemptLimitReached = () => {
-    return attempts.filter(a => a.userId === "guest").length >= 3;
+    return attempts.filter(a => a.userId === "guest").length >= 1;
+  };
+
+  const isGuestAiLimitReached = () => {
+    return guestAiUsage >= 1;
+  };
+
+  const incrementGuestAiUsage = () => {
+    const nextValue = guestAiUsage + 1;
+    setGuestAiUsage(nextValue);
+    localStorage.setItem('platonus_guest_ai_usage', nextValue.toString());
   };
 
   return (
@@ -141,7 +158,9 @@ export const QuizProvider = ({ children }: { children: React.ReactNode }) => {
       getAttemptsForQuiz,
       createFavoritesQuiz,
       isGuestLimitReached,
-      isGuestAttemptLimitReached
+      isGuestAttemptLimitReached,
+      isGuestAiLimitReached,
+      incrementGuestAiUsage
     }}>
       {children}
     </QuizContext.Provider>

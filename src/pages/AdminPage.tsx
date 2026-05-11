@@ -7,15 +7,11 @@ import { useToast } from "@/hooks/use-toast";
 import {
     Users,
     Ticket,
-    Clock,
     Trash2,
     Copy,
     CheckCircle,
-    Loader2,
     PlusCircle,
-    LayoutDashboard,
     Search,
-    Filter,
     ArrowUpRight,
     UserPlus,
     Activity,
@@ -23,7 +19,6 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";

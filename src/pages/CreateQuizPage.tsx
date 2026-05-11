@@ -22,7 +22,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 export default function CreateQuizPage() {
     const { user } = useAuth();
-    const { addQuiz, isGuestLimitReached } = useQuiz();
+    const { addQuiz, isGuestLimitReached, isGuestAiLimitReached, incrementGuestAiUsage } = useQuiz();
     const { t } = useLanguage();
     const navigate = useNavigate();
     const { toast } = useToast();
@@ -37,6 +37,7 @@ export default function CreateQuizPage() {
 
     const isGuest = !user;
     const limitReached = isGuest && isGuestLimitReached();
+    const aiLimitReached = isGuest && isGuestAiLimitReached();
 
     const parseTextContent = async (text: string) => {
         const rawParts = text.split("<question>");
@@ -66,7 +67,9 @@ export default function CreateQuizPage() {
         };
 
         const questionsToGenerate = questions.filter(q => q.needsVariants);
-        if (questionsToGenerate.length > 0) {
+        let aiUsedThisSession = false;
+
+        if (questionsToGenerate.length > 0 && !aiLimitReached) {
             const CONCURRENCY = 10;
             const queue = [...questionsToGenerate];
             await Promise.all(Array(Math.min(CONCURRENCY, queue.length)).fill(null).map(async () => {
@@ -76,32 +79,44 @@ export default function CreateQuizPage() {
                     try {
                         q.variants = await generateQuestionVariants(q.text);
                         q.needsCorrectIndex = q.variants.length > 1 && autoFindCorrect;
+                        aiUsedThisSession = true;
                     } catch (e) {
                         q.variants = ["Error"];
                     }
                     updateProgress();
                 }
             }));
+        } else if (questionsToGenerate.length > 0 && aiLimitReached) {
+            questionsToGenerate.forEach(() => updateProgress());
         }
 
         const questionsToFindCorrect = questions.filter(q => q.needsCorrectIndex);
-        const BATCH_SIZE = 20;
-        for (let i = 0; i < questionsToFindCorrect.length; i += BATCH_SIZE) {
-            const batch = questionsToFindCorrect.slice(i, i + BATCH_SIZE);
-            try {
-                const indexes = await findCorrectAnswersBatch(batch.map(q => ({ text: q.text, variants: q.variants })));
-                batch.forEach((q, idx) => {
-                    q.correctVariantIndex = indexes[idx] ?? 0;
-                    updateProgress();
-                });
-            } catch (e) {
-                batch.forEach(() => updateProgress());
+        if (questionsToFindCorrect.length > 0 && !aiLimitReached) {
+            const BATCH_SIZE = 20;
+            for (let i = 0; i < questionsToFindCorrect.length; i += BATCH_SIZE) {
+                const batch = questionsToFindCorrect.slice(i, i + BATCH_SIZE);
+                try {
+                    const indexes = await findCorrectAnswersBatch(batch.map(q => ({ text: q.text, variants: q.variants })));
+                    batch.forEach((q, idx) => {
+                        q.correctVariantIndex = indexes[idx] ?? 0;
+                        updateProgress();
+                    });
+                    aiUsedThisSession = true;
+                } catch (e) {
+                    batch.forEach(() => updateProgress());
+                }
             }
+        } else if (questionsToFindCorrect.length > 0 && aiLimitReached) {
+            questionsToFindCorrect.forEach(() => updateProgress());
         }
 
         questions.forEach(q => {
             if (!q.needsVariants && !q.needsCorrectIndex) updateProgress();
         });
+
+        if (isGuest && aiUsedThisSession) {
+            incrementGuestAiUsage();
+        }
 
         return questions.filter(q => q.text !== "");
     };
@@ -236,6 +251,15 @@ export default function CreateQuizPage() {
     };
 
     const handleFindCorrectAnswer = async (questionId: string) => {
+        if (aiLimitReached) {
+            toast({
+                variant: "destructive",
+                title: t('error'),
+                description: t('limitReached'),
+            });
+            return;
+        }
+
         const question = parsedQuestions.find(q => q.id === questionId);
         if (!question) return;
 
@@ -246,6 +270,11 @@ export default function CreateQuizPage() {
             setParsedQuestions(prev => prev.map(q =>
                 q.id === questionId ? { ...q, correctVariantIndex: correctIndex } : q
             ));
+            
+            if (isGuest) {
+                incrementGuestAiUsage();
+            }
+
             toast({
                 title: t('success'),
                 description: t('correct'),
@@ -344,6 +373,7 @@ export default function CreateQuizPage() {
                                 <Switch
                                     checked={autoFindCorrect}
                                     onCheckedChange={setAutoFindCorrect}
+                                    disabled={aiLimitReached}
                                     className="data-[state=checked]:bg-blue-500"
                                 />
                             </div>
@@ -393,6 +423,7 @@ export default function CreateQuizPage() {
                                 <Switch
                                     checked={autoFindCorrect}
                                     onCheckedChange={setAutoFindCorrect}
+                                    disabled={aiLimitReached}
                                     className="data-[state=checked]:bg-blue-500"
                                 />
                             </div>
