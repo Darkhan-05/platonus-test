@@ -3,6 +3,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/context/AuthContext";
+import { useLanguage } from "@/context/LanguageContext";
 import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
@@ -14,15 +15,15 @@ export default function RegisterPage() {
   const [isLoading, setIsLoading] = useState(false);
 
   const { register } = useAuth();
+  const { t } = useLanguage();
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (urlToken && urlToken !== "default-token" && urlToken !== "34bdca435-69cf-46e3-8d72-f307fc69c25f") { // Check if it's a real token or the placeholders
+    if (urlToken && urlToken !== "default-token" && urlToken !== "34bdca435-69cf-46e3-8d72-f307fc69c25f") {
       setToken(urlToken);
     } else if (urlToken === "34bdca435-69cf-46e3-8d72-f307fc69c25f") {
       setToken(urlToken);
     }
-    // Note: Darkhan12@ for admin is likely direct input
   }, [urlToken]);
 
   const hasUrlToken = !!urlToken && urlToken !== "default-token";
@@ -30,9 +31,8 @@ export default function RegisterPage() {
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Базовая валидация на пустые поля
     if (!name.trim() || !token.trim()) {
-      setError("Пожалуйста, заполните все поля.");
+      setError(t('fillAllFields'));
       return;
     }
 
@@ -48,7 +48,7 @@ export default function RegisterPage() {
       await register(token.trim(), name.trim());
       navigate("/dashboard");
     } catch (err: any) {
-      setError(err.response?.data?.message || "Ошибка регистрации. Проверьте правильность токена.");
+      setError(err.response?.data?.message || t('registerError'));
     } finally {
       setIsLoading(false);
     }
@@ -59,49 +59,43 @@ export default function RegisterPage() {
       <Card className="w-full max-w-md">
         <CardHeader>
           <CardTitle>
-            {hasUrlToken ? "Активация доступа" : "Вход по приглашению"}
+            {hasUrlToken ? t('activation') : t('invitationEntry')}
           </CardTitle>
           <CardDescription>
-            {hasUrlToken
-              ? "Введите ваше имя для активации доступа по приглашению."
-              : "Вставьте код приглашения, который вы получили, и введите ваше имя."}
+            {hasUrlToken ? t('enterNameDesc') : t('enterTokenDesc')}
           </CardDescription>
         </CardHeader>
 
         <form onSubmit={handleRegister}>
           <CardContent className="space-y-4">
-
-            {/* Блок ошибки */}
             {error && (
               <div className="p-3 text-sm text-red-500 bg-red-50 border border-red-200 rounded-md">
                 {error}
               </div>
             )}
 
-            {/* Поле для ввода токена - скрываем, если он есть в URL */}
             {!hasUrlToken && (
               <div className="space-y-2 animate-in fade-in duration-300">
-                <Label htmlFor="token">Код приглашения (Токен)</Label>
+                <Label htmlFor="token">{t('tokenLabel')}</Label>
                 <Input
                   id="token"
                   required
                   value={token}
                   onChange={(e) => setToken(e.target.value)}
-                  placeholder="Вставьте код из WhatsApp"
+                  placeholder="WhatsApp..."
                   disabled={isLoading}
                 />
               </div>
             )}
 
-            {/* Поле для ввода имени */}
             <div className="space-y-2">
-              <Label htmlFor="name">Ваше Имя</Label>
+              <Label htmlFor="name">{t('nameLabel')}</Label>
               <Input
                 id="name"
                 required
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="Иван Иванов"
+                placeholder="Name..."
                 disabled={isLoading}
               />
             </div>
@@ -111,10 +105,9 @@ export default function RegisterPage() {
             <Button
               type="submit"
               className="w-full"
-              // Кнопка недоступна, если идет загрузка или одно из полей пустое
               disabled={isLoading || !name.trim() || !token.trim()}
             >
-              {isLoading ? "Активация..." : "Зарегистрироваться"}
+              {isLoading ? t('activating') : t('registerButton')}
             </Button>
           </CardFooter>
         </form>

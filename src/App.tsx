@@ -3,6 +3,7 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { AuthProvider, useAuth } from "@/context/AuthContext";
 import { QuizProvider } from "@/context/QuizContext";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import { LanguageProvider, useLanguage } from "@/context/LanguageContext";
 
 import CreateQuizPage from "@/pages/CreateQuizPage";
 import DashboardPage from "@/pages/DashboardPage";
@@ -42,6 +43,7 @@ const UnauthenticatedRoute = ({ children }: { children: React.ReactNode }) => {
 
 function AppContent() {
   const { isLoading } = useAuth();
+  const { t } = useLanguage();
 
   if (isLoading) {
     return (
@@ -60,6 +62,9 @@ function AppContent() {
               <span className="w-1 h-1 bg-blue-500 rounded-full animate-bounce [animation-delay:-0.15s]" />
               <span className="w-1 h-1 bg-blue-500 rounded-full animate-bounce" />
             </div>
+            <p className="text-xs text-muted-foreground uppercase tracking-widest font-medium opacity-50 mt-4">
+              {t('authChecking')}
+            </p>
           </div>
         </div>
       </div>
@@ -130,11 +135,13 @@ function AppContent() {
 function App() {
   return (
     <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
-      <AuthProvider>
-        <QuizProvider>
-          <AppContent />
-        </QuizProvider>
-      </AuthProvider>
+      <LanguageProvider>
+        <AuthProvider>
+          <QuizProvider>
+            <AppContent />
+          </QuizProvider>
+        </AuthProvider>
+      </LanguageProvider>
     </ThemeProvider>
   );
 }

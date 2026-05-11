@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useQuiz } from "@/context/QuizContext";
+import { useLanguage } from "@/context/LanguageContext";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,6 +23,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 export default function CreateQuizPage() {
     const { user } = useAuth();
     const { addQuiz, isGuestLimitReached } = useQuiz();
+    const { t } = useLanguage();
     const navigate = useNavigate();
     const { toast } = useToast();
 
@@ -60,10 +62,9 @@ export default function CreateQuizPage() {
         const updateProgress = () => {
             completedSteps++;
             setProcessProgress((completedSteps / totalSteps) * 100);
-            setStatusMessage(`Обработка: ${completedSteps} из ${totalSteps}...`);
+            setStatusMessage(`${t('processing')}: ${completedSteps} ${t('outOf')} ${totalSteps}...`);
         };
 
-        // 1. Process questions that need variants (Sequential/Parallel generation)
         const questionsToGenerate = questions.filter(q => q.needsVariants);
         if (questionsToGenerate.length > 0) {
             const CONCURRENCY = 10;
@@ -76,19 +77,17 @@ export default function CreateQuizPage() {
                         q.variants = await generateQuestionVariants(q.text);
                         q.needsCorrectIndex = q.variants.length > 1 && autoFindCorrect;
                     } catch (e) {
-                        q.variants = ["Ошибка генерации"];
+                        q.variants = ["Error"];
                     }
                     updateProgress();
                 }
             }));
         }
 
-        // 2. Process questions that need correct answer index in BATCHES
         const questionsToFindCorrect = questions.filter(q => q.needsCorrectIndex);
         const BATCH_SIZE = 20;
         for (let i = 0; i < questionsToFindCorrect.length; i += BATCH_SIZE) {
             const batch = questionsToFindCorrect.slice(i, i + BATCH_SIZE);
-            setStatusMessage(`Поиск ответов...`);
             try {
                 const indexes = await findCorrectAnswersBatch(batch.map(q => ({ text: q.text, variants: q.variants })));
                 batch.forEach((q, idx) => {
@@ -96,12 +95,10 @@ export default function CreateQuizPage() {
                     updateProgress();
                 });
             } catch (e) {
-                console.error("Batch failed", e);
                 batch.forEach(() => updateProgress());
             }
         }
 
-        // Handle progress for questions that needed nothing
         questions.forEach(q => {
             if (!q.needsVariants && !q.needsCorrectIndex) updateProgress();
         });
@@ -119,8 +116,8 @@ export default function CreateQuizPage() {
             if (isGuest && questions.length > 300) {
                 questions = questions.slice(0, 300);
                 toast({
-                    title: "Лимит превышен",
-                    description: "Для гостей доступно максимум 300 вопросов. Лишние вопросы были обрезаны.",
+                    title: t('limitReached'),
+                    description: t('guestLimitQuestions'),
                     variant: "destructive"
                 });
             }
@@ -129,21 +126,21 @@ export default function CreateQuizPage() {
                 setParsedQuestions([...parsedQuestions, ...questions]);
                 setRawText("");
                 toast({
-                    title: "Успешно!",
-                    description: `Распознано вопросов: ${questions.length}`,
+                    title: t('success'),
+                    description: `${t('recognizeQuestions')}: ${questions.length}`,
                 });
             } else {
                 toast({
                     variant: "destructive",
-                    title: "Ошибка",
-                    description: "Не удалось найти вопросы в тексте. Проверьте формат.",
+                    title: t('error'),
+                    description: t('noQuestionsFound'),
                 });
             }
         } catch (error) {
             toast({
                 variant: "destructive",
-                title: "Ошибка распознавания",
-                description: "Произошла непредвиденная ошибка при обработке текста.",
+                title: t('error'),
+                description: t('errorParsing'),
             });
         }
         setIsProcessing(false);
@@ -156,7 +153,7 @@ export default function CreateQuizPage() {
 
         setIsProcessing(true);
         setProcessProgress(0);
-        setStatusMessage("Читаем файл...");
+        setStatusMessage(t('processing'));
         let text = "";
 
         try {
@@ -169,8 +166,8 @@ export default function CreateQuizPage() {
             } else {
                 toast({
                     variant: "destructive",
-                    title: "Формат не поддерживается",
-                    description: "Пожалуйста, используйте .docx, .doc или .txt",
+                    title: t('errorUnsupportedFormat'),
+                    description: ".docx, .doc, .txt",
                 });
                 setIsProcessing(false);
                 return;
@@ -180,33 +177,27 @@ export default function CreateQuizPage() {
 
             if (isGuest && questions.length > 300) {
                 questions = questions.slice(0, 300);
-                toast({
-                    title: "Лимит превышен",
-                    description: "Для гостей доступно максимум 300 вопросов. Лишние вопросы были обрезаны.",
-                    variant: "destructive"
-                });
             }
 
             if (questions.length > 0) {
                 setParsedQuestions([...parsedQuestions, ...questions]);
                 toast({
-                    title: "Файл обработан",
-                    description: `Добавлено вопросов: ${questions.length}`,
+                    title: t('success'),
+                    description: `${t('recognizeQuestions')}: ${questions.length}`,
                 });
             } else {
                 toast({
                     variant: "destructive",
-                    title: "Вопросы не найдены",
-                    description: "В файле не обнаружено вопросов в нужном формате.",
+                    title: t('error'),
+                    description: t('noQuestionsFound'),
                 });
             }
 
         } catch (err) {
-            console.error(err);
             toast({
                 variant: "destructive",
-                title: "Ошибка при чтении файла",
-                description: "Не удалось извлечь текст из файла.",
+                title: t('error'),
+                description: t('errorFileRead'),
             });
         }
 
@@ -218,27 +209,24 @@ export default function CreateQuizPage() {
         try {
             const newQuiz: Quiz = {
                 id: crypto.randomUUID(),
-                title: title || (parsedQuestions.length > 0 ? parsedQuestions[0].text : "Новый тест"),
+                title: title || (parsedQuestions.length > 0 ? parsedQuestions[0].text : t('createNewQuiz')),
                 questions: parsedQuestions,
-                createdBy: user?.id || "unknown",
+                createdBy: isGuest ? "guest" : (user?.id || "unknown"),
                 createdAt: new Date().toISOString(),
                 timesSolved: 0
             };
 
-            addQuiz({
-                ...newQuiz,
-                createdBy: isGuest ? "guest" : (user?.id || "unknown")
-            });
+            addQuiz(newQuiz);
             toast({
-                title: "Тест сохранен!",
-                description: "Вы можете найти его в своем дашборде.",
+                title: t('success'),
+                description: t('saveQuiz'),
             });
             navigate("/dashboard");
         } catch (error) {
             toast({
                 variant: "destructive",
-                title: "Ошибка сохранения",
-                description: "Не удалось сохранить ваш тест.",
+                title: t('error'),
+                description: t('errorSave'),
             });
         }
     };
@@ -252,22 +240,21 @@ export default function CreateQuizPage() {
         if (!question) return;
 
         setIsProcessing(true);
-        setStatusMessage("AI ищет ответ...");
+        setStatusMessage(t('processing'));
         try {
             const correctIndex = await findCorrectAnswerIndex(question.text, question.variants);
             setParsedQuestions(prev => prev.map(q =>
                 q.id === questionId ? { ...q, correctVariantIndex: correctIndex } : q
             ));
             toast({
-                title: "Ответ найден!",
-                description: `Для вопроса "${question.text.substring(0, 20)}..."`,
+                title: t('success'),
+                description: t('correct'),
             });
         } catch (err) {
-            console.error("Failed to find correct answer:", err);
             toast({
                 variant: "destructive",
-                title: "Ошибка AI",
-                description: "Не удалось автоматически найти правильный ответ.",
+                title: t('error'),
+                description: t('errorAi'),
             });
         } finally {
             setIsProcessing(false);
@@ -278,17 +265,16 @@ export default function CreateQuizPage() {
     return (
         <div className="container mx-auto max-w-4xl space-y-8 py-8 animate-in fade-in duration-500">
             <div>
-                <h1 className="text-3xl font-bold tracking-tight">Создание нового теста</h1>
+                <h1 className="text-3xl font-bold tracking-tight">{t('createNewQuiz')}</h1>
                 <p className="text-muted-foreground mt-2">
-                    Добавляйте вопросы вручную или загрузите файл с готовым списком (.docx, .txt).
+                    {t('startCreating')}
                 </p>
                 {isGuest && (
                     <Alert className="mt-4 bg-yellow-50 dark:bg-yellow-900/10 border-yellow-200 dark:border-yellow-800">
                         <Info className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />
-                        <AlertTitle>Гостевой доступ</AlertTitle>
+                        <AlertTitle>{t('guestMode')}</AlertTitle>
                         <AlertDescription>
-                            Вы создаете тест как гость. Вы можете создать только <b>один</b> тест (макс. 300 вопросов).
-                            Зарегистрируйтесь, чтобы сохранять неограниченное количество тестов навсегда.
+                            {t('guestLimitInfo')}
                         </AlertDescription>
                     </Alert>
                 )}
@@ -296,14 +282,14 @@ export default function CreateQuizPage() {
 
             <Card className="shadow-sm">
                 <CardHeader>
-                    <CardTitle className="text-xl">Название теста</CardTitle>
+                    <CardTitle className="text-xl">{t('quizTitle')}</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                     <div className="space-y-2">
                         <Input
                             value={title}
                             onChange={e => setTitle(e.target.value)}
-                            placeholder="Например: Основы высшей математики"
+                            placeholder={t('quizTitle')}
                             className="bg-muted/30 focus-visible:ring-blue-500"
                         />
                     </div>
@@ -314,34 +300,29 @@ export default function CreateQuizPage() {
                 <CardHeader>
                     <CardTitle className="text-xl flex items-center gap-2">
                         <FileText className="h-5 w-5 text-blue-500" />
-                        Добавление вопросов
+                        {t('createQuiz')}
                     </CardTitle>
                     <CardDescription className="leading-relaxed">
-                        Используйте формат: <br /><code>&lt;question&gt;Текст вопроса <br />&lt;variant&gt;Правильный ответ<br />&lt;variant&gt;Неправильный ответ</code>
-                        <br />
-                        <span className="inline-block mt-2 p-3 bg-blue-50 text-blue-800 rounded-lg text-xs font-medium dark:bg-blue-900/30 dark:text-blue-200 border border-blue-100 dark:border-blue-800/50">
-                            ✨ <b>Platonus AI:</b> Если вы укажите только тег <code>&lt;question&gt;</code> без вариантов,
-                            искусственный интеллект сгенерирует ответы автоматически.
-                        </span>
+                        Format: &lt;question&gt; ... &lt;variant&gt; ...
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
                     <Tabs defaultValue="manual">
                         <TabsList className="grid w-full grid-cols-2 bg-muted/50 p-1 rounded-xl">
                             <TabsTrigger value="manual" className="flex items-center gap-2 rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm">
-                                <Keyboard className="h-4 w-4" /> Ручной ввод
+                                <Keyboard className="h-4 w-4" /> {t('manualInput')}
                             </TabsTrigger>
                             <TabsTrigger value="upload" className="flex items-center gap-2 rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm">
-                                <FileText className="h-4 w-4" /> Загрузка файла
+                                <FileText className="h-4 w-4" /> {t('fileUpload')}
                             </TabsTrigger>
                         </TabsList>
 
                         <TabsContent value="manual" className="space-y-4 pt-6">
                             <div className="space-y-2">
-                                <Label className="text-sm font-semibold">Текст с вопросами</Label>
+                                <Label className="text-sm font-semibold">{t('pasteText')}</Label>
                                 <Textarea
                                     className="min-h-[180px] font-mono text-sm leading-relaxed bg-muted/20 border-dashed focus-visible:ring-blue-500"
-                                    placeholder={"<question>Сколько будет 2+2? \n<variant>4 \n<variant>3\n<question>Столица Франции?"}
+                                    placeholder="<question>..."
                                     value={rawText}
                                     onChange={e => setRawText(e.target.value)}
                                 />
@@ -353,8 +334,8 @@ export default function CreateQuizPage() {
                                         <Sparkles className="h-5 w-5" />
                                     </div>
                                     <div>
-                                        <div className="text-sm font-semibold">Auto-AI: Найти ответы</div>
-                                        <div className="text-xs text-muted-foreground">ИИ автоматически выделит верный вариант</div>
+                                        <div className="text-sm font-semibold">{t('autoFindAnswers')}</div>
+                                        <div className="text-xs text-muted-foreground">{t('aiDescription')}</div>
                                     </div>
                                 </div>
                                 <Switch
@@ -369,7 +350,7 @@ export default function CreateQuizPage() {
                                     <div className="flex items-center justify-between text-sm">
                                         <div className="flex items-center gap-2 font-medium">
                                             <Loader2 className="h-4 w-4 animate-spin text-blue-500" />
-                                            {statusMessage || "Обработка..."}
+                                            {statusMessage || t('processing')}
                                         </div>
                                         <span className="text-muted-foreground font-mono">{Math.round(processProgress)}%</span>
                                     </div>
@@ -377,14 +358,14 @@ export default function CreateQuizPage() {
                                 </div>
                             ) : (
                                 <Button onClick={handleTextParse} disabled={isProcessing || !rawText.trim()} className="w-full bg-blue-600 hover:bg-blue-700 h-10 px-8 transition-all hover:scale-[1.02]">
-                                    Распознать вопросы
+                                    {t('recognizeQuestions')}
                                 </Button>
                             )}
                         </TabsContent>
 
                         <TabsContent value="upload" className="space-y-4 pt-6">
                             <div className="space-y-2">
-                                <Label className="text-sm font-semibold">Выберите файл (.docx, .doc, .txt)</Label>
+                                <Label className="text-sm font-semibold">{t('fileUpload')}</Label>
                                 <div className="relative group">
                                     <Input
                                         type="file"
@@ -402,8 +383,8 @@ export default function CreateQuizPage() {
                                         <Sparkles className="h-5 w-5" />
                                     </div>
                                     <div>
-                                        <div className="text-sm font-semibold">Найти правильные ответы через AI</div>
-                                        <div className="text-xs text-muted-foreground">Включите для автоматического анализа текста</div>
+                                        <div className="text-sm font-semibold">{t('autoFindAnswers')}</div>
+                                        <div className="text-xs text-muted-foreground">{t('aiDescription')}</div>
                                     </div>
                                 </div>
                                 <Switch
@@ -418,7 +399,7 @@ export default function CreateQuizPage() {
                                     <div className="flex items-center justify-between text-sm">
                                         <div className="flex items-center gap-2 font-medium">
                                             <Loader2 className="h-4 w-4 animate-spin text-blue-500" />
-                                            {statusMessage || "Анализ файла..."}
+                                            {statusMessage || t('processing')}
                                         </div>
                                         <span className="text-muted-foreground font-mono">{Math.round(processProgress)}%</span>
                                     </div>
@@ -435,8 +416,8 @@ export default function CreateQuizPage() {
                     <CardHeader className="bg-muted/20">
                         <div className="flex justify-between items-center">
                             <div>
-                                <CardTitle className="text-xl">Предпросмотр</CardTitle>
-                                <CardDescription>Распознано {parsedQuestions.length} вопросов</CardDescription>
+                                <CardTitle className="text-xl">{t('preview')}</CardTitle>
+                                <CardDescription>{t('recognizeQuestions')} {parsedQuestions.length}</CardDescription>
                             </div>
                             <Button
                                 variant="outline"
@@ -444,7 +425,7 @@ export default function CreateQuizPage() {
                                 className="text-xs h-8 border-destructive/20 text-destructive hover:bg-destructive/5 hover:border-destructive"
                                 onClick={() => setParsedQuestions([])}
                             >
-                                Очистить всё
+                                {t('clearAll')}
                             </Button>
                         </div>
                     </CardHeader>
@@ -467,7 +448,6 @@ export default function CreateQuizPage() {
                                                     className="h-8 w-8 text-blue-500 hover:text-blue-700 hover:bg-blue-50 rounded-full"
                                                     onClick={() => handleFindCorrectAnswer(q.id)}
                                                     disabled={isProcessing}
-                                                    title="Найти правильный ответ через AI"
                                                 >
                                                     {isProcessing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
                                                 </Button>
@@ -495,7 +475,7 @@ export default function CreateQuizPage() {
                                                         {idx === q.correctVariantIndex && (
                                                             <div className="flex items-center gap-1 shrink-0 bg-green-200/50 dark:bg-green-800/50 px-1.5 py-0.5 rounded text-[10px] uppercase tracking-wider">
                                                                 <CheckCircle2 className="h-2.5 w-2.5" />
-                                                                Верный
+                                                                {t('correct')}
                                                             </div>
                                                         )}
                                                     </div>
@@ -516,7 +496,7 @@ export default function CreateQuizPage() {
                     onClick={() => navigate("/dashboard")}
                     className="text-muted-foreground hover:text-foreground"
                 >
-                    Отмена
+                    {t('cancel')}
                 </Button>
                 <Button
                     size="lg"
@@ -524,7 +504,7 @@ export default function CreateQuizPage() {
                     disabled={parsedQuestions.length === 0 || limitReached}
                     className="bg-blue-600 hover:bg-blue-700 px-10 shadow-lg shadow-blue-500/20"
                 >
-                    {limitReached ? "Лимит исчерпан" : "Сохранить тест"}
+                    {limitReached ? t('limitReached') : t('saveQuiz')}
                 </Button>
             </div>
         </div>
