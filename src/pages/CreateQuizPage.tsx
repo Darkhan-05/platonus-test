@@ -302,8 +302,11 @@ export default function CreateQuizPage() {
                         <FileText className="h-5 w-5 text-blue-500" />
                         {t('createQuiz')}
                     </CardTitle>
-                    <CardDescription className="leading-relaxed">
-                        Format: &lt;question&gt; ... &lt;variant&gt; ...
+                    <div className="mt-2 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 rounded-lg text-sm text-blue-700 dark:text-blue-300 animate-in fade-in slide-in-from-top-1 duration-500">
+                        <b>{t('aiHint')}</b>
+                    </div>
+                    <CardDescription className="leading-relaxed whitespace-pre-line">
+                        {t('formatInstructions')}
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -322,7 +325,7 @@ export default function CreateQuizPage() {
                                 <Label className="text-sm font-semibold">{t('pasteText')}</Label>
                                 <Textarea
                                     className="min-h-[180px] font-mono text-sm leading-relaxed bg-muted/20 border-dashed focus-visible:ring-blue-500"
-                                    placeholder="<question>..."
+                                    placeholder={t('quizPlaceholder')}
                                     value={rawText}
                                     onChange={e => setRawText(e.target.value)}
                                 />
@@ -423,7 +426,11 @@ export default function CreateQuizPage() {
                                 variant="outline"
                                 size="sm"
                                 className="text-xs h-8 border-destructive/20 text-destructive hover:bg-destructive/5 hover:border-destructive"
-                                onClick={() => setParsedQuestions([])}
+                                onClick={() => {
+                                    if (confirm(t('clearConfirm'))) {
+                                        setParsedQuestions([]);
+                                    }
+                                }}
                             >
                                 {t('clearAll')}
                             </Button>
