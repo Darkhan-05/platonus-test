@@ -12,7 +12,7 @@ import { type Question, type Quiz } from "@/types";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Trash2, Loader2, FileText, Keyboard, CheckCircle2, Sparkles } from "lucide-react";
 import mammoth from "mammoth";
-import { generateQuestionVariants, findCorrectAnswerIndex } from "@/lib/gemini";
+import { generateQuestionVariants, findCorrectAnswerIndex, findCorrectAnswersBatch } from "@/lib/gemini";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { Progress } from "@/components/ui/progress";
@@ -29,7 +29,7 @@ export default function CreateQuizPage() {
     const [rawText, setRawText] = useState("");
     const [parsedQuestions, setParsedQuestions] = useState<Question[]>([]);
     const [isProcessing, setIsProcessing] = useState(false);
-    const [autoFindCorrect, setAutoFindCorrect] = useState(true);
+    const [autoFindCorrect, setAutoFindCorrect] = useState(false);
     const [processProgress, setProcessProgress] = useState(0);
     const [statusMessage, setStatusMessage] = useState("");
 
@@ -37,57 +37,76 @@ export default function CreateQuizPage() {
     const limitReached = isGuest && isGuestLimitReached();
 
     const parseTextContent = async (text: string) => {
-        // Format: <question>Question Text <variant>Option 1 <variant>Option 2
         const rawParts = text.split("<question>");
         const parts = rawParts.filter(p => p.trim());
-        const newQuestions: Question[] = [];
-
         const totalSteps = parts.length;
         let completedSteps = 0;
 
-        for (const part of parts) {
+        const questions: (Question & { needsVariants: boolean; needsCorrectIndex: boolean })[] = parts.map((part, index) => {
             const variantParts = part.split("<variant>");
             const questionText = variantParts[0].trim();
-            let variants = variantParts.slice(1).map(v => v.trim()).filter(v => v);
+            const variants = variantParts.slice(1).map(v => v.trim()).filter(v => v);
 
-            if (questionText) {
-                setStatusMessage(`Обработка вопроса ${completedSteps + 1} из ${totalSteps}...`);
+            return {
+                id: crypto.randomUUID(),
+                text: questionText,
+                variants: variants,
+                correctVariantIndex: 0,
+                needsVariants: questionText !== "" && variants.length === 0,
+                needsCorrectIndex: questionText !== "" && variants.length > 1 && autoFindCorrect
+            };
+        });
 
-                if (variants.length === 0) {
-                    try {
-                        const generatedVariants = await generateQuestionVariants(questionText);
-                        variants = generatedVariants;
-                    } catch (e) {
-                        console.error("Gemini failed for", questionText);
-                        variants = ["Ошибка генерации вариантов"];
-                    }
-                }
-
-                if (variants.length > 0) {
-                    let correctIndex = 0;
-
-                    if (autoFindCorrect && variants.length > 1) {
-                        try {
-                            correctIndex = await findCorrectAnswerIndex(questionText, variants);
-                        } catch (e) {
-                            console.error("Auto-find failed for", questionText);
-                        }
-                    }
-
-                    newQuestions.push({
-                        id: crypto.randomUUID(),
-                        text: questionText,
-                        variants: variants,
-                        correctVariantIndex: correctIndex
-                    });
-                }
-            }
-
+        const updateProgress = () => {
             completedSteps++;
             setProcessProgress((completedSteps / totalSteps) * 100);
+            setStatusMessage(`Обработка: ${completedSteps} из ${totalSteps}...`);
+        };
+
+        // 1. Process questions that need variants (Sequential/Parallel generation)
+        const questionsToGenerate = questions.filter(q => q.needsVariants);
+        if (questionsToGenerate.length > 0) {
+            const CONCURRENCY = 10;
+            const queue = [...questionsToGenerate];
+            await Promise.all(Array(Math.min(CONCURRENCY, queue.length)).fill(null).map(async () => {
+                while (queue.length > 0) {
+                    const q = queue.shift();
+                    if (!q) continue;
+                    try {
+                        q.variants = await generateQuestionVariants(q.text);
+                        q.needsCorrectIndex = q.variants.length > 1 && autoFindCorrect;
+                    } catch (e) {
+                        q.variants = ["Ошибка генерации"];
+                    }
+                    updateProgress();
+                }
+            }));
         }
 
-        return newQuestions;
+        // 2. Process questions that need correct answer index in BATCHES
+        const questionsToFindCorrect = questions.filter(q => q.needsCorrectIndex);
+        const BATCH_SIZE = 20;
+        for (let i = 0; i < questionsToFindCorrect.length; i += BATCH_SIZE) {
+            const batch = questionsToFindCorrect.slice(i, i + BATCH_SIZE);
+            setStatusMessage(`Поиск ответов...`);
+            try {
+                const indexes = await findCorrectAnswersBatch(batch.map(q => ({ text: q.text, variants: q.variants })));
+                batch.forEach((q, idx) => {
+                    q.correctVariantIndex = indexes[idx] ?? 0;
+                    updateProgress();
+                });
+            } catch (e) {
+                console.error("Batch failed", e);
+                batch.forEach(() => updateProgress());
+            }
+        }
+
+        // Handle progress for questions that needed nothing
+        questions.forEach(q => {
+            if (!q.needsVariants && !q.needsCorrectIndex) updateProgress();
+        });
+
+        return questions.filter(q => q.text !== "");
     };
 
     const handleTextParse = async () => {
@@ -301,7 +320,7 @@ export default function CreateQuizPage() {
                         Используйте формат: <br /><code>&lt;question&gt;Текст вопроса <br />&lt;variant&gt;Правильный ответ<br />&lt;variant&gt;Неправильный ответ</code>
                         <br />
                         <span className="inline-block mt-2 p-3 bg-blue-50 text-blue-800 rounded-lg text-xs font-medium dark:bg-blue-900/30 dark:text-blue-200 border border-blue-100 dark:border-blue-800/50">
-                            ✨ <b>Gemini AI:</b> Если вы укажете только тег <code>&lt;question&gt;</code> без вариантов,
+                            ✨ <b>Platonus AI:</b> Если вы укажите только тег <code>&lt;question&gt;</code> без вариантов,
                             искусственный интеллект сгенерирует ответы автоматически.
                         </span>
                     </CardDescription>
@@ -335,7 +354,7 @@ export default function CreateQuizPage() {
                                     </div>
                                     <div>
                                         <div className="text-sm font-semibold">Auto-AI: Найти ответы</div>
-                                        <div className="text-xs text-muted-foreground">Gemini автоматически выделит верный вариант</div>
+                                        <div className="text-xs text-muted-foreground">ИИ автоматически выделит верный вариант</div>
                                     </div>
                                 </div>
                                 <Switch
@@ -357,7 +376,7 @@ export default function CreateQuizPage() {
                                     <Progress value={processProgress} className="h-2 bg-blue-100 dark:bg-blue-900/20" />
                                 </div>
                             ) : (
-                                <Button onClick={handleTextParse} disabled={isProcessing || !rawText.trim()} className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 h-10 px-8 transition-all hover:scale-[1.02]">
+                                <Button onClick={handleTextParse} disabled={isProcessing || !rawText.trim()} className="w-full bg-blue-600 hover:bg-blue-700 h-10 px-8 transition-all hover:scale-[1.02]">
                                     Распознать вопросы
                                 </Button>
                             )}
