@@ -4,7 +4,7 @@ import { Progress } from "@/components/ui/progress";
 import { useAuth } from "@/context/AuthContext";
 import { useQuiz } from "@/context/QuizContext";
 import { cn } from "@/lib/utils";
-import { ChevronLeft, ChevronRight, Flag, Heart, Loader2, Timer } from "lucide-react"; // Добавил иконки навигации
+import { ChevronLeft, ChevronRight, Flag, Heart, Loader2, Timer, X } from "lucide-react"; // Добавил иконки навигации
 import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 
@@ -48,8 +48,8 @@ export default function QuizSessionPage() {
             const prevAttempt = attempts.find(a => a.id === settings.previousAttemptId);
             if (prevAttempt) {
                 // Оставляем только те вопросы, которые БЫЛИ в прошлой попытке И на которые ответили неверно
-                qs = qs.filter(q => 
-                    prevAttempt.answers[q.id] !== undefined && 
+                qs = qs.filter(q =>
+                    prevAttempt.answers[q.id] !== undefined &&
                     prevAttempt.answers[q.id] !== q.correctVariantIndex
                 );
             }
@@ -113,8 +113,8 @@ export default function QuizSessionPage() {
                         </div>
                         <h3 className="text-xl font-bold text-foreground">Вопросы не найдены</h3>
                         <p className="max-w-xs mx-auto">
-                            {settings.retakeMistakes 
-                                ? "Поздравляем! Похоже, в этом тесте у вас больше нет неверных ответов." 
+                            {settings.retakeMistakes
+                                ? "Поздравляем! Похоже, в этом тесте у вас больше нет неверных ответов."
                                 : "В выбранном диапазоне или тесте нет доступных вопросов."}
                         </p>
                         <Button onClick={() => navigate("/dashboard")} variant="outline" className="mt-4">
@@ -187,18 +187,30 @@ export default function QuizSessionPage() {
     return (
         <div className="max-w-3xl mx-auto space-y-6 py-4">
             {/* Верхняя панель: Заголовок и Таймер */}
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                <h2 className="text-xl font-bold line-clamp-1">{quiz.title}</h2>
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 relative">
+                <h2 className="text-xl font-bold line-clamp-1 pr-10 sm:pr-0">{quiz.title}</h2>
 
-                {settings.mode === 'exam' && settings.timerMinutes > 0 && (
-                    <div className={cn(
-                        "flex items-center gap-2 font-mono text-xl px-3 py-1 rounded-md border bg-background",
-                        timeLeft < 60 ? "text-red-500 border-red-200 animate-pulse bg-red-50 dark:bg-red-900/20" : "text-foreground"
-                    )}>
-                        <Timer className="w-5 h-5" />
-                        {formatTime(timeLeft)}
-                    </div>
-                )}
+                <div className="flex items-center gap-4">
+                    {settings.mode === 'exam' && settings.timerMinutes > 0 && (
+                        <div className={cn(
+                            "flex items-center gap-2 font-mono text-xl px-3 py-1 rounded-md border bg-background",
+                            timeLeft < 60 ? "text-red-500 border-red-200 animate-pulse bg-red-50 dark:bg-red-900/20" : "text-foreground"
+                        )}>
+                            <Timer className="w-5 h-5" />
+                            {formatTime(timeLeft)}
+                        </div>
+                    )}
+
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => navigate("/dashboard")}
+                        className="hover:bg-red-500 dark:hover:bg-red-900/20 hover:text-white transition-colors"
+                        title="Выйти из теста"
+                    >
+                        Выйти из теста
+                    </Button>
+                </div>
             </div>
 
             {/* Прогресс бар */}
